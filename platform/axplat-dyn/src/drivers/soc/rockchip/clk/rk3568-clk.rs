@@ -1,41 +1,21 @@
-// Copyright 2025 The Axvisor Team
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-use axklib::mem::iomap;
+use log::{debug, info, warn};
 use rdif_clk::{ClockId, Interface};
-use rdrive::{DriverGeneric, KError};
-use rk3568_clk::CRU;
-use rk3568_clk::cru_clksel_con28_bits::*;
+use rdrive::{
+    DriverGeneric, KError, PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo,
+};
+use rk3568_clk::{CRU, cru_clksel_con28_bits::*};
 
-use rdrive::{PlatformDevice, probe::OnProbeError};
-use rdrive::{module_driver, register::FdtInfo};
+use crate::drivers::iomap;
 
-/// 频率常量
 const MHZ: u32 = 1_000_000;
 const KHZ: u32 = 1_000;
-
-use core::convert::Into;
-use core::result::Result::{self, *};
-use log::{debug, info, warn};
+pub const EMMC_CLK_ID: usize = 0x7c;
 
 pub struct ClkDriver(CRU);
 
-pub const EMMC_CLK_ID: usize = 0x7c;
-
 impl ClkDriver {
     pub fn new(cru_address: u64) -> Self {
-        ClkDriver(CRU::new(cru_address as *mut _))
+        Self(CRU::new(cru_address as *mut _))
     }
 }
 
@@ -57,8 +37,8 @@ impl Interface for ClkDriver {
                 con >> CRU_CLKSEL_CCLK_EMMC_POS
             }
             _ => {
-                warn!("Unsupported clock ID: {:?}", id);
-                Err(KError::InvalidArg { name: "clock_id" })?
+                warn!("Unsupported clock ID: {id:?}");
+                return Err(KError::InvalidArg { name: "clock_id" });
             }
         };
         Ok(rate as u64)
@@ -67,7 +47,7 @@ impl Interface for ClkDriver {
     fn set_rate(&mut self, id: ClockId, rate: u64) -> Result<(), KError> {
         match id.into() {
             EMMC_CLK_ID => {
-                info!("Setting eMMC clock to {} Hz", rate);
+                info!("Setting eMMC clock to {rate} Hz");
                 let src_clk = match rate as u32 {
                     r if r == 24 * MHZ => CRU_CLKSEL_CCLK_EMMC_XIN_SOC0_MUX,
                     r if r == 52 * MHZ || r == 50 * MHZ => CRU_CLKSEL_CCLK_EMMC_CPL_DIV_50M,
@@ -75,12 +55,12 @@ impl Interface for ClkDriver {
                     r if r == 150 * MHZ => CRU_CLKSEL_CCLK_EMMC_GPL_DIV_150M,
                     r if r == 200 * MHZ => CRU_CLKSEL_CCLK_EMMC_GPL_DIV_200M,
                     r if r == 400 * KHZ || r == 375 * KHZ => CRU_CLKSEL_CCLK_EMMC_SOC0_375K,
-                    _ => panic!("Unsupported eMMC clock rate: {} Hz", rate),
+                    _ => panic!("Unsupported eMMC clock rate: {rate} Hz"),
                 };
                 self.0.cru_clksel_set_cclk_emmc(src_clk);
             }
             _ => {
-                warn!("Unsupported clock ID: {:?}", id);
+                warn!("Unsupported clock ID: {id:?}");
                 return Err(KError::InvalidArg { name: "clock_id" });
             }
         }
@@ -126,11 +106,9 @@ fn probe(info: FdtInfo<'_>, plat_dev: PlatformDevice) -> Result<(), OnProbeError
     .expect("Failed to iomap CRU");
 
     let cru_address = cru_reg_base.as_ptr() as u64;
-
-    debug!("cru address: {:#x}", cru_address);
+    debug!("cru address: {cru_address:#x}");
 
     let clk = rdif_clk::Clk::new(ClkDriver::new(cru_address));
-
     plat_dev.register(clk);
 
     Ok(())

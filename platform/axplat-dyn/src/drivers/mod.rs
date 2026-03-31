@@ -1,5 +1,3 @@
-extern crate alloc;
-
 use alloc::{
     alloc::{alloc, alloc_zeroed, dealloc},
     boxed::Box,
@@ -17,6 +15,9 @@ use spin::Mutex;
 mod pci;
 
 pub mod blk;
+#[cfg(feature = "serial")]
+pub mod serial;
+pub mod soc;
 
 const MAX_BLOCK_DEVICES: usize = 16;
 

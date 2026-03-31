@@ -1,39 +1,39 @@
 [workspace]
-resolver = "2"
-members = ["starryos", "kernel"]
 exclude = ["arceos"]
+members = ["starryos", "kernel"]
+resolver = "2"
 
 [workspace.package]
-version = "0.2.0-preview.2"
-edition = "2024"
 description = "A Linux-compatible OS kernel built on ArceOS unikernel"
+edition = "2024"
 license = "Apache-2.0"
+version = "0.2.0-preview.2"
 
 authors = [
-    "Azure-stars <Azure_stars@126.com>",
-    "Yuekai Jia <equation618@gmail.com>",
-    "KylinSoft Co., Ltd. <https://www.kylinos.cn/>",
-    "朝倉水希 <asakuramizu111@gmail.com>",
-    "Mivik <mivikq@gmail.com>",
+  "Azure-stars <Azure_stars@126.com>",
+  "Yuekai Jia <equation618@gmail.com>",
+  "KylinSoft Co., Ltd. <https://www.kylinos.cn/>",
+  "朝倉水希 <asakuramizu111@gmail.com>",
+  "Mivik <mivikq@gmail.com>",
 ]
 homepage = "https://github.com/Starry-OS"
 repository = "https://github.com/Starry-OS/StarryOS"
 
 [workspace.dependencies]
-axfeat = { version = "0.3.0-preview.2" }
+axfeat = {version = "0.3.0-preview.2"}
 
-axalloc = { version = "0.3.0-preview.2" }
-axconfig = { version = "0.3.0-preview.2" }
-axdisplay = { version = "0.3.0-preview.2" }
-axdriver = { version = "0.3.0-preview.2" }
-axfs = { version = "0.3.0-preview.2", package = "axfs-ng" }
-axhal = { version = "0.3.0-preview.2" }
-axinput = { version = "0.3.0-preview.2" }
-axlog = { version = "0.3.0-preview.2" }
-axmm = { version = "0.3.0-preview.2" }
-axnet = { version = "0.3.0-preview.2", package = "axnet-ng" }
-axruntime = { version = "0.3.0-preview.2" }
-axsync = { version = "0.3.0-preview.2" }
-axtask = { version = "0.3.0-preview.2" }
+axalloc = {version = "0.3.0-preview.2"}
+axconfig = {version = "0.3.0-preview.2"}
+axdisplay = {version = "0.3.0-preview.2"}
+axdriver = {version = "0.3.0-preview.2"}
+axfs = {version = "0.3.0-preview.2", package = "axfs-ng"}
+axhal = {version = "0.3.0-preview.2"}
+axinput = {version = "0.3.0-preview.2"}
+axlog = {version = "0.3.0-preview.2"}
+axmm = {version = "0.3.0-preview.2"}
+axnet = {version = "0.3.0-preview.2", package = "axnet-ng"}
+axruntime = {version = "0.3.0-preview.2"}
+axsync = {version = "0.3.0-preview.2"}
+axtask = {version = "0.3.0-preview.2"}
 
-starry-kernel = { path = "kernel", version = "=0.2.0-preview.2" }
+starry-kernel = {path = "kernel", version = "=0.2.0-preview.2"}

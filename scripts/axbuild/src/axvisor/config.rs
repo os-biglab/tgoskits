@@ -78,7 +78,7 @@ mod tests {
             r#"
 env = { AX_IP = "10.0.2.15", AX_GW = "10.0.2.2" }
 target = "aarch64-unknown-none-softfloat"
-features = ["fs", "rk3568-clk"]
+features = ["fs", "axplat-dyn/rk3568-clk"]
 log = "Info"
 plat_dyn = true
 vm_configs = []
@@ -140,7 +140,7 @@ plat_dyn = true
             r#"
 env = { AX_IP = "10.0.2.15", AX_GW = "10.0.2.2" }
 target = "aarch64-unknown-none-softfloat"
-features = ["rk3588-clk"]
+features = ["axplat-dyn/rk3588-clk"]
 log = "Info"
 plat_dyn = true
 "#,

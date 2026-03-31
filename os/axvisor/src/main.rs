@@ -31,8 +31,8 @@ extern crate axstd as std;
 
 #[cfg(target_arch = "x86_64")]
 extern crate axplat_x86_qemu_q35;
+use axplat_dyn as _;
 
-mod driver;
 mod hal;
 mod logo;
 mod shell;

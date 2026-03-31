@@ -41,6 +41,7 @@ path = "xtask/main.rs"
 [dependencies]
 axfeat.workspace = true
 starry-kernel.workspace = true
+axplat-dyn = {version = "0.3.0-preview.3", default-features = false, optional = true}
 
 [dependencies.axplat-riscv64-visionfive2]
 features = ["fp-simd", "irq", "rtc"]
@@ -56,3 +57,5 @@ clap = { version = "4.6", features = ["derive"] }
 [package.metadata.vendor-filter]
 all-features = true
 platforms = ["riscv64gc-unknown-none-elf", "loongarch64-unknown-none-softfloat"]
+
+
