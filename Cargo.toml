@@ -312,7 +312,7 @@ axfs_vfs = { path = "components/axfs_crates/axfs_vfs", version = "0.2.2" }
 
 axbuild = { path = "scripts/axbuild", version = "0.3.0" }
 
-starry-kernel = { path = "os/StarryOS/kernel", version = "0.3.0" }
+starry-kernel = { path = "os/StarryOS/kernel", version = "0.4.0" }
 
 axcpu = { version = "0.4.0", path = "components/axcpu" }
 axplat = { version = "0.4.1", path = "components/axplat_crates/axplat" }
