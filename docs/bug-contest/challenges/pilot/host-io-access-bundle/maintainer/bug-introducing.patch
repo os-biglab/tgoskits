@@ -1,0 +1,8 @@
+diff --git a/components/cap_access/src/lib.rs b/components/cap_access/src/lib.rs
+--- a/components/cap_access/src/lib.rs
++++ b/components/cap_access/src/lib.rs
+@@ -46,3 +46,3 @@ impl<T> WithCap<T> {
+     pub const fn can_access(&self, cap: Cap) -> bool {
+-        self.cap.contains(cap)
++        self.cap.intersects(cap)
+     }

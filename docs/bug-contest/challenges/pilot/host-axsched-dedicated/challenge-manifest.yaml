@@ -1,0 +1,51 @@
+id: host-axsched-dedicated
+title: 调度器专属题
+track: host
+phase: pilot
+difficulty: L2
+mode: dedicated_challenge
+tags:
+- systems-first
+- hybrid
+baseline_ref: next
+judge_profile: host-standard
+summary: 验证单组件专属题在预赛中的区分度。
+pilot_metadata:
+  expected_time_minutes: 90
+  competition_goal: 预赛进阶题
+allowed_paths:
+- components/axsched
+forbidden_paths:
+- docs/bug-contest
+- .github
+- container
+- scripts/repo
+focus_components:
+- axsched
+focus_harnesses: []
+visible_commands:
+- cargo test -p axsched
+hidden_commands:
+- 'hidden-scheduler: 补不同调度顺序、时间片和优先级组合'
+- 'hidden-regression: 验证 runqueue 相关路径没有被修坏'
+- 'hidden-stability: 验证修复不会引入新的饥饿或不公平行为'
+quality_gates:
+- cargo fmt --all -- --check
+- cargo xtask clippy
+offline_assets: []
+submission:
+  required:
+  - patch.diff
+  - regression-test-or-repro
+  - root-cause-report.md
+  - impact-analysis.md
+  optional:
+  - crash-input.bin
+  - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+  - 检查是否只对 visible tests 做硬编码补丁
+  - 检查是否绕过真实逻辑或删除错误路径
+  - 检查回归测试是否真正覆盖根因

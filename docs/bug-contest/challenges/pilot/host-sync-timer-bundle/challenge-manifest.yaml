@@ -1,0 +1,56 @@
+id: host-sync-timer-bundle
+title: 同步与计时审计包（timer_list exact deadline）
+track: host
+phase: pilot-formal
+difficulty: L1
+mode: audit_bundle
+tags:
+  - systems-first
+  - hybrid
+baseline_ref: next
+judge_profile: host-standard
+summary: 修复 timer_list 中“now 恰好等于 deadline 时不触发事件”的边界 bug。
+pilot_metadata:
+  expected_time_minutes: 75
+  competition_goal: 首批正式化试运行题
+formal_focus:
+  component: timer_list
+  bug_location: components/timer_list/src/lib.rs
+  visible_test: components/timer_list/tests/exact_deadline.rs
+  hidden_test_asset: docs/bug-contest/challenges/pilot/host-sync-timer-bundle/maintainer/hidden-tests/timer_list_hidden.rs
+  bug_patch: docs/bug-contest/challenges/pilot/host-sync-timer-bundle/maintainer/bug-introducing.patch
+  solution_patch: docs/bug-contest/challenges/pilot/host-sync-timer-bundle/maintainer/solution.patch
+allowed_paths:
+  - components/timer_list
+forbidden_paths:
+  - docs/bug-contest
+  - .github
+  - container
+  - scripts/repo
+focus_components:
+  - timer_list
+focus_harnesses: []
+visible_commands:
+  - cargo test -p timer_list --test exact_deadline
+hidden_commands:
+  - bash docs/bug-contest/challenges/pilot/host-sync-timer-bundle/maintainer/run-hidden-tests.sh
+quality_gates:
+  - cargo fmt --all -- --check
+  - cargo clippy -p timer_list --tests
+offline_assets: []
+submission:
+  required:
+    - patch.diff
+    - regression-test-or-repro
+    - root-cause-report.md
+    - impact-analysis.md
+  optional:
+    - crash-input.bin
+    - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+    - 检查是否只对 visible tests 做硬编码补丁
+    - 检查是否把等号边界修成题目特判而不是恢复正确比较语义
+    - 检查回归测试是否覆盖 exact deadline 语义

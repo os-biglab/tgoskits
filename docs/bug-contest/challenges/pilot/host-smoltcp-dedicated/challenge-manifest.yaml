@@ -1,0 +1,51 @@
+id: host-smoltcp-dedicated
+title: 网络协议栈专属题
+track: host
+phase: pilot
+difficulty: L2
+mode: dedicated_challenge
+tags:
+- security-first
+- hybrid
+baseline_ref: next
+judge_profile: host-standard
+summary: 验证协议解析题对网安学生的吸引力与稳定性。
+pilot_metadata:
+  expected_time_minutes: 120
+  competition_goal: 预赛高分题
+allowed_paths:
+- components/starry-smoltcp
+forbidden_paths:
+- docs/bug-contest
+- .github
+- container
+- scripts/repo
+focus_components:
+- smoltcp
+focus_harnesses: []
+visible_commands:
+- cargo test -p smoltcp
+hidden_commands:
+- 'hidden-packet: 补畸形报文、长度边界和异常输入'
+- 'hidden-regression: 验证协议栈相邻路径未被修坏'
+- 'hidden-state-machine: 验证 socket 与协议状态机转移'
+quality_gates:
+- cargo fmt --all -- --check
+- cargo xtask clippy
+offline_assets: []
+submission:
+  required:
+  - patch.diff
+  - regression-test-or-repro
+  - root-cause-report.md
+  - impact-analysis.md
+  optional:
+  - crash-input.bin
+  - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+  - 检查是否只对 visible tests 做硬编码补丁
+  - 检查是否绕过真实逻辑或删除错误路径
+  - 检查回归测试是否真正覆盖根因

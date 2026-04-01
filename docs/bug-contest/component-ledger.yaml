@@ -1,0 +1,671 @@
+season: 2026-s1
+owner: tgoskits-bug-contest
+source_of_truth:
+  - docs/components.md
+  - docs/build-system.md
+  - scripts/test/std_crates.csv
+selection_rules:
+  audit_bundle:
+    description: 将 3-5 个小而基础的组件捆成一个审计包，要求选手在受限路径内找出 1-2 个真实 bug 并提交修复与回归测试。
+    best_for:
+      - host 可直接评测的基础 crate
+      - 难度入门但知识点相近的组件
+  dedicated_challenge:
+    description: 对单个高价值组件或单条系统链路单独出题，提供更完整的复现和判题入口。
+    best_for:
+      - 复用广、影响大或需要完整上下文的组件
+      - 需要独立答辩或维护者复审的题目
+  final_only:
+    description: 只放到决赛或高阶专题赛，通常依赖 QEMU、rootfs、guest 镜像或复杂配置。
+    best_for:
+      - StarryOS 深水区
+      - Axvisor 与虚拟化边界题
+judge_profiles:
+  host-standard:
+    phase:
+      - warmup
+      - preliminary
+    base_commands:
+      - cargo test -p <crate>
+      - cargo fmt --all -- --check
+      - cargo xtask clippy
+    notes:
+      - 优先选择已进入 scripts/test/std_crates.csv 的包
+      - 允许为单题增加隐藏测试，但不要改变官方镜像
+  arceos-riscv64:
+    phase:
+      - warmup
+      - preliminary
+      - final
+    base_commands:
+      - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    notes:
+      - 统一使用 riscv64，避免多架构放大维护成本
+      - 优先复用 test-suit/arceos 现有测试包
+  starry-riscv64:
+    phase:
+      - preliminary
+      - final
+    base_commands:
+      - cargo starry test qemu --target riscv64
+    notes:
+      - rootfs 必须预置在官方镜像或比赛挂载卷中
+      - 只在主办方可控环境下启用隐藏测试
+  axvisor-aarch64:
+    phase:
+      - final
+    base_commands:
+      - cargo axvisor test qemu --target aarch64
+    notes:
+      - guest 镜像、vmconfigs 与 qemu 配置必须离线预置
+      - 不允许选手比赛期间联网拉取 guest 资源
+  maintainer-review:
+    phase:
+      - preliminary
+      - final
+    base_commands:
+      - 平台接收私密披露报告、补丁与回归测试
+    notes:
+      - 仅用于开放披露赛道
+      - 由私密披露小组和对应赛道负责人共同复核
+entries:
+  - id: host-memory-allocators-bundle
+    title: 内存分配审计包
+    layer: components
+    phase:
+      - warmup
+      - preliminary
+    mode: audit_bundle
+    components:
+      - axallocator
+      - bitmap-allocator
+      - range-alloc-arceos
+    paths:
+      - components/axallocator
+      - components/bitmap-allocator
+      - components/range-alloc-arceos
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L1
+    judge_profile: host-standard
+    visible_commands:
+      - cargo test -p axallocator
+      - cargo test -p bitmap-allocator
+      - cargo test -p range-alloc-arceos
+    likely_bug_classes:
+      - 边界条件
+      - 双重回收
+      - 对齐与碎片控制
+      - 空闲区间合并错误
+    competition_goal: 预赛主赛道
+  - id: host-sync-timer-bundle
+    title: 同步与计时审计包
+    layer: components
+    phase:
+      - warmup
+      - preliminary
+    mode: audit_bundle
+    components:
+      - kspin
+      - lazyinit
+      - timer_list
+      - cpumask
+      - int_ratio
+    paths:
+      - components/kspin
+      - components/lazyinit
+      - components/timer_list
+      - components/cpumask
+      - components/int_ratio
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L1
+    judge_profile: host-standard
+    visible_commands:
+      - cargo test -p kspin
+      - cargo test -p lazyinit
+      - cargo test -p timer_list
+    likely_bug_classes:
+      - 锁作用域错误
+      - 初始化次序错误
+      - 定时器取消与重排错误
+      - CPU 集合与比例计算边界
+    competition_goal: 预赛主赛道
+  - id: host-io-access-bundle
+    title: IO 与权限审计包
+    layer: components
+    phase:
+      - warmup
+      - preliminary
+    mode: audit_bundle
+    components:
+      - axio
+      - axpoll
+      - cap_access
+      - axerrno
+    paths:
+      - components/axio
+      - components/axpoll
+      - components/cap_access
+      - components/axerrno
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L1
+    judge_profile: host-standard
+    visible_commands:
+      - cargo test -p axio
+      - cargo test -p axpoll
+      - cargo test -p cap_access
+      - cargo test -p axerrno
+    likely_bug_classes:
+      - 权限检查漏写
+      - ready mask 计算错误
+      - 错误码映射不一致
+      - trait 边界与状态转换错误
+    competition_goal: 预赛主赛道
+  - id: host-axsched-dedicated
+    title: 调度器专属题
+    layer: components
+    phase:
+      - preliminary
+    mode: dedicated_challenge
+    components:
+      - axsched
+    paths:
+      - components/axsched
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L2
+    judge_profile: host-standard
+    visible_commands:
+      - cargo test -p axsched
+    likely_bug_classes:
+      - runqueue 不变量破坏
+      - 时间片更新错误
+      - 饥饿与优先级反转
+    competition_goal: 预赛进阶题
+  - id: host-rsext4-dedicated
+    title: ext4 与 VFS 专属题
+    layer: components
+    phase:
+      - preliminary
+      - final
+    mode: dedicated_challenge
+    components:
+      - rsext4
+      - axfs-ng-vfs
+    paths:
+      - components/rsext4
+      - components/axfs-ng-vfs
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L2
+    judge_profile: host-standard
+    visible_commands:
+      - cargo test -p rsext4
+      - cargo test -p axfs-ng-vfs
+    likely_bug_classes:
+      - 元数据解析错误
+      - 目录项边界处理错误
+      - VFS 语义不一致
+      - 镜像输入健壮性问题
+    competition_goal: 预赛高分题
+  - id: host-smoltcp-dedicated
+    title: 网络协议栈专属题
+    layer: components
+    phase:
+      - preliminary
+      - final
+    mode: dedicated_challenge
+    components:
+      - smoltcp
+    paths:
+      - components/starry-smoltcp
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L2
+    judge_profile: host-standard
+    visible_commands:
+      - cargo test -p smoltcp
+    likely_bug_classes:
+      - 报文长度校验错误
+      - 状态机跳转错误
+      - 分片与重组异常输入
+      - socket 资源释放错误
+    competition_goal: 预赛高分题
+  - id: arceos-axtask-dedicated
+    title: ArceOS 任务与同步专属题
+    layer: arceos
+    phase:
+      - warmup
+      - preliminary
+    mode: dedicated_challenge
+    components:
+      - axtask
+      - axsync
+    paths:
+      - os/arceos/modules/axtask
+      - os/arceos/modules/axsync
+      - test-suit/arceos/rust/task
+    focus_harnesses:
+      - arceos-parallel
+      - arceos-priority
+      - arceos-wait-queue
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L2
+    judge_profile: arceos-riscv64
+    visible_commands:
+      - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    likely_bug_classes:
+      - 调度与抢占时序
+      - wait queue 条件竞争
+      - 优先级继承缺失
+    competition_goal: 预赛核心题
+  - id: arceos-axnet-dedicated
+    title: ArceOS 网络链路专属题
+    layer: arceos
+    phase:
+      - preliminary
+    mode: dedicated_challenge
+    components:
+      - axnet
+      - axdriver
+    paths:
+      - os/arceos/modules/axnet
+      - os/arceos/modules/axdriver
+      - test-suit/arceos/rust/net
+    focus_harnesses:
+      - arceos-httpclient
+      - arceos-httpserver
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L2
+    judge_profile: arceos-riscv64
+    visible_commands:
+      - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    likely_bug_classes:
+      - 驱动与协议栈接线错误
+      - 网卡初始化竞态
+      - socket 生命周期错误
+    competition_goal: 预赛高分题
+  - id: arceos-axfs-dedicated
+    title: ArceOS 文件系统与 shell 专属题
+    layer: arceos
+    phase:
+      - preliminary
+    mode: dedicated_challenge
+    components:
+      - axfs
+      - axruntime
+    paths:
+      - os/arceos/modules/axfs
+      - os/arceos/modules/axruntime
+      - test-suit/arceos/rust/fs
+    focus_harnesses:
+      - arceos-shell
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L2
+    judge_profile: arceos-riscv64
+    visible_commands:
+      - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    likely_bug_classes:
+      - 路径解析错误
+      - 块设备接线错误
+      - shell 命令回归
+    competition_goal: 预赛高分题
+  - id: arceos-axhal-driver-dedicated
+    title: ArceOS HAL 与驱动专属题
+    layer: arceos
+    phase:
+      - preliminary
+      - final
+    mode: dedicated_challenge
+    components:
+      - axhal
+      - axdriver
+      - axconfig
+    paths:
+      - os/arceos/modules/axhal
+      - os/arceos/modules/axdriver
+      - os/arceos/modules/axconfig
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L3
+    judge_profile: arceos-riscv64
+    visible_commands:
+      - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    likely_bug_classes:
+      - 平台寄存器配置错误
+      - 中断初始化顺序错误
+      - feature 组合导致的驱动回归
+    competition_goal: 决赛候选
+  - id: arceos-runtime-feature-dedicated
+    title: ArceOS 运行时与 feature 接线专属题
+    layer: arceos
+    phase:
+      - preliminary
+    mode: dedicated_challenge
+    components:
+      - axruntime
+      - axfeat
+      - arceos_api
+      - axstd
+    paths:
+      - os/arceos/modules/axruntime
+      - os/arceos/api/axfeat
+      - os/arceos/api/arceos_api
+      - os/arceos/ulib/axstd
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L2
+    judge_profile: arceos-riscv64
+    visible_commands:
+      - cargo xtask test
+      - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    likely_bug_classes:
+      - feature gate 漏接
+      - API 行为不一致
+      - 运行时初始化顺序错误
+    competition_goal: 预赛专题题
+  - id: arceos-platform-bringup-dedicated
+    title: ArceOS 平台 bring-up 专属题
+    layer: arceos
+    phase:
+      - final
+    mode: dedicated_challenge
+    components:
+      - axplat-riscv64-qemu-virt
+      - axplat-aarch64-qemu-virt
+      - axhal
+    paths:
+      - components/axplat_crates/platforms/axplat-riscv64-qemu-virt
+      - components/axplat_crates/platforms/axplat-aarch64-qemu-virt
+      - os/arceos/modules/axhal
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L3
+    judge_profile: arceos-riscv64
+    visible_commands:
+      - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    likely_bug_classes:
+      - 早期启动映射错误
+      - 平台时钟与串口配置错误
+      - 架构相关 feature 回归
+    competition_goal: 决赛专属
+  - id: starry-process-signal-dedicated
+    title: Starry 进程与信号专属题
+    layer: starry
+    phase:
+      - preliminary
+      - final
+    mode: dedicated_challenge
+    components:
+      - starry-process
+      - starry-signal
+    paths:
+      - components/starry-process
+      - components/starry-signal
+      - os/StarryOS/kernel
+      - test-suit/starryos
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L2
+    judge_profile: starry-riscv64
+    visible_commands:
+      - cargo starry test qemu --target riscv64
+    likely_bug_classes:
+      - 信号递送顺序错误
+      - 进程状态迁移错误
+      - Linux 行为不兼容
+    competition_goal: 预赛高分题
+  - id: starry-vm-dedicated
+    title: Starry 虚拟内存专属题
+    layer: starry
+    phase:
+      - final
+    mode: final_only
+    components:
+      - starry-vm
+    paths:
+      - components/starry-vm
+      - os/StarryOS/kernel
+      - test-suit/starryos
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L3
+    judge_profile: starry-riscv64
+    visible_commands:
+      - cargo starry test qemu --target riscv64
+    likely_bug_classes:
+      - 地址空间边界错误
+      - 页权限与缺页处理错误
+      - 用户态映射回归
+    competition_goal: 决赛专属
+  - id: starry-syscall-compat-dedicated
+    title: Starry 系统调用兼容专属题
+    layer: starry
+    phase:
+      - preliminary
+      - final
+    mode: dedicated_challenge
+    components:
+      - starry-kernel
+      - starryos
+    paths:
+      - os/StarryOS/kernel
+      - os/StarryOS/starryos
+      - test-suit/starryos
+    target_students:
+      - systems-first
+      - security-first
+      - hybrid
+    difficulty: L2
+    judge_profile: starry-riscv64
+    visible_commands:
+      - cargo starry test qemu --target riscv64
+    likely_bug_classes:
+      - 返回值与 errno 不一致
+      - 用户缓冲区检查不完整
+      - rootfs 用户程序行为回归
+    competition_goal: 预赛专题题
+  - id: starry-rootfs-apps-dedicated
+    title: Starry rootfs 与用户态程序专属题
+    layer: starry
+    phase:
+      - final
+    mode: final_only
+    components:
+      - starryos-test
+      - starryos
+    paths:
+      - test-suit/starryos
+      - os/StarryOS/starryos
+      - os/StarryOS/kernel
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L3
+    judge_profile: starry-riscv64
+    visible_commands:
+      - cargo starry test qemu --target riscv64
+    likely_bug_classes:
+      - rootfs 中用户态程序触发的内核回归
+      - 环境依赖与路径处理错误
+      - 兼容性边角行为
+    competition_goal: 决赛专属
+  - id: axvisor-vcpu-state-dedicated
+    title: Axvisor vCPU 状态专属题
+    layer: axvisor
+    phase:
+      - final
+    mode: final_only
+    components:
+      - axvcpu
+      - arm_vcpu
+      - riscv_vcpu
+    paths:
+      - components/axvcpu
+      - components/arm_vcpu
+      - components/riscv_vcpu
+      - os/axvisor/src
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L3
+    judge_profile: axvisor-aarch64
+    visible_commands:
+      - cargo axvisor test qemu --target aarch64
+    likely_bug_classes:
+      - 寄存器保存恢复不完整
+      - vCPU 生命周期错误
+      - 多核状态同步错误
+    competition_goal: 决赛主赛道
+  - id: axvisor-guest-memory-dedicated
+    title: Axvisor Guest 内存与地址空间专属题
+    layer: axvisor
+    phase:
+      - final
+    mode: final_only
+    components:
+      - axaddrspace
+      - axvm
+    paths:
+      - components/axaddrspace
+      - components/axvm
+      - os/axvisor/src
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L3
+    judge_profile: axvisor-aarch64
+    visible_commands:
+      - cargo axvisor test qemu --target aarch64
+    likely_bug_classes:
+      - guest 物理地址越界
+      - 内存区域权限错误
+      - 页表更新与异常处理不一致
+    competition_goal: 决赛主赛道
+  - id: axvisor-device-emulation-dedicated
+    title: Axvisor 设备模拟专属题
+    layer: axvisor
+    phase:
+      - final
+    mode: final_only
+    components:
+      - axdevice
+      - axdevice_base
+    paths:
+      - components/axdevice
+      - components/axdevice_base
+      - os/axvisor/src
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L3
+    judge_profile: axvisor-aarch64
+    visible_commands:
+      - cargo axvisor test qemu --target aarch64
+    likely_bug_classes:
+      - MMIO 读写顺序错误
+      - virtio 队列状态机错误
+      - 非法输入校验不完整
+    competition_goal: 决赛主赛道
+  - id: axvisor-hypercall-boundary-dedicated
+    title: Axvisor Hypercall 边界专属题
+    layer: axvisor
+    phase:
+      - final
+    mode: final_only
+    components:
+      - axhvc
+      - axvisor_api
+    paths:
+      - components/axhvc
+      - components/axvisor_api
+      - os/axvisor/src
+    target_students:
+      - security-first
+      - hybrid
+    difficulty: L3
+    judge_profile: axvisor-aarch64
+    visible_commands:
+      - cargo axvisor test qemu --target aarch64
+    likely_bug_classes:
+      - 参数校验缺失
+      - guest/host 共享内存边界错误
+      - 能力隔离与错误传播错误
+    competition_goal: 决赛主赛道
+  - id: axvisor-board-vmconfig-dedicated
+    title: Axvisor 板级配置与 VM 配置专属题
+    layer: axvisor
+    phase:
+      - final
+    mode: final_only
+    components:
+      - axvmconfig
+      - axplat-x86-qemu-q35
+      - axplat-dyn
+    paths:
+      - components/axvmconfig
+      - platform/x86-qemu-q35
+      - platform/axplat-dyn
+      - os/axvisor/configs/board
+      - os/axvisor/configs/vms
+    target_students:
+      - systems-first
+      - hybrid
+    difficulty: L3
+    judge_profile: axvisor-aarch64
+    visible_commands:
+      - cargo axvisor test qemu --target aarch64
+    likely_bug_classes:
+      - vmconfig 字段不一致
+      - 板级配置与 guest 资源不匹配
+      - 根文件系统与启动参数错误
+    competition_goal: 决赛专题题
+  - id: open-responsible-disclosure-lane
+    title: 真实漏洞披露赛道
+    layer: cross-layer
+    phase:
+      - preliminary
+      - final
+    mode: dedicated_challenge
+    components:
+      - components/*
+      - os/arceos/modules/*
+      - os/StarryOS/kernel/*
+      - os/axvisor/*
+    paths:
+      - components
+      - os/arceos
+      - os/StarryOS
+      - os/axvisor
+    target_students:
+      - security-first
+      - systems-first
+      - hybrid
+    difficulty: L3
+    judge_profile: maintainer-review
+    visible_commands:
+      - 提交私密披露报告、补丁与回归测试
+    likely_bug_classes:
+      - 真实未公开问题
+      - 跨层连锁回归
+      - 安全边界与稳定性问题
+    competition_goal: 长期质量回流

@@ -1,0 +1,13 @@
+diff --git a/components/timer_list/src/lib.rs b/components/timer_list/src/lib.rs
+--- a/components/timer_list/src/lib.rs
++++ b/components/timer_list/src/lib.rs
+@@ -94,7 +94,7 @@ impl<E: TimerEvent> TimerList<E> {
+     pub fn expire_one(&mut self, now: TimeValue) -> Option<(TimeValue, E)> {
+         if let Some(e) = self.events.peek() {
+-            if e.deadline <= now {
++            if e.deadline < now {
+                 return self.events.pop().map(|e| (e.deadline, e.event));
+             }
+         }
+         None
+     }

@@ -1,0 +1,57 @@
+id: host-memory-allocators-bundle
+title: 内存分配审计包
+track: host
+phase: pilot
+difficulty: L1
+mode: audit_bundle
+tags:
+- systems-first
+- hybrid
+baseline_ref: next
+judge_profile: host-standard
+summary: 验证新手是否能在宿主机路径中完成基础定位与修复。
+pilot_metadata:
+  expected_time_minutes: 60
+  competition_goal: 预赛主赛道
+allowed_paths:
+- components/axallocator
+- components/bitmap-allocator
+- components/range-alloc-arceos
+forbidden_paths:
+- docs/bug-contest
+- .github
+- container
+- scripts/repo
+focus_components:
+- axallocator
+- bitmap-allocator
+- range-alloc-arceos
+focus_harnesses: []
+visible_commands:
+- cargo test -p axallocator
+- cargo test -p bitmap-allocator
+- cargo test -p range-alloc-arceos
+hidden_commands:
+- 'hidden-boundary: 补额外边界值、空输入或极端输入'
+- 'hidden-regression: 防止只对 visible tests 打补丁'
+- 'hidden-bundle: 对审计包内多个分配组件交叉回归'
+quality_gates:
+- cargo fmt --all -- --check
+- cargo xtask clippy
+offline_assets: []
+submission:
+  required:
+  - patch.diff
+  - regression-test-or-repro
+  - root-cause-report.md
+  - impact-analysis.md
+  optional:
+  - crash-input.bin
+  - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+  - 检查是否只对 visible tests 做硬编码补丁
+  - 检查是否绕过真实逻辑或删除错误路径
+  - 检查回归测试是否真正覆盖根因

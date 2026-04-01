@@ -1,0 +1,54 @@
+id: host-rsext4-dedicated
+title: ext4 与 VFS 专属题
+track: host
+phase: pilot
+difficulty: L2
+mode: dedicated_challenge
+tags:
+- security-first
+- hybrid
+baseline_ref: next
+judge_profile: host-standard
+summary: 验证文件系统题的说明成本与 hidden tests 命中率。
+pilot_metadata:
+  expected_time_minutes: 120
+  competition_goal: 预赛高分题
+allowed_paths:
+- components/rsext4
+- components/axfs-ng-vfs
+forbidden_paths:
+- docs/bug-contest
+- .github
+- container
+- scripts/repo
+focus_components:
+- rsext4
+- axfs-ng-vfs
+focus_harnesses: []
+visible_commands:
+- cargo test -p rsext4
+- cargo test -p axfs-ng-vfs
+hidden_commands:
+- 'hidden-metadata: 补目录项、extent 与元数据边界条件'
+- 'hidden-regression: 验证相邻文件系统路径未被修坏'
+- 'hidden-vfs-integration: 验证 ext4 与 VFS 的协同行为'
+quality_gates:
+- cargo fmt --all -- --check
+- cargo xtask clippy
+offline_assets: []
+submission:
+  required:
+  - patch.diff
+  - regression-test-or-repro
+  - root-cause-report.md
+  - impact-analysis.md
+  optional:
+  - crash-input.bin
+  - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+  - 检查是否只对 visible tests 做硬编码补丁
+  - 检查是否绕过真实逻辑或删除错误路径
+  - 检查回归测试是否真正覆盖根因

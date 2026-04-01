@@ -1,0 +1,42 @@
+id: challenge-id
+title: 题目标题
+track: host
+phase: preliminary
+difficulty: L1
+mode: audit_bundle
+tags:
+  - systems-first
+  - hybrid
+baseline_ref: contest/2026-s1/challenge-id
+judge_profile: host-standard
+summary: 一句话说明本题考察的能力与问题类型。
+allowed_paths:
+  - components/example
+forbidden_paths:
+  - .github
+  - test-suit
+focus_components:
+  - example-crate
+visible_commands:
+  - cargo test -p example-crate
+hidden_commands:
+  - cargo test -p example-crate --test hidden_regression
+quality_gates:
+  - cargo fmt --all -- --check
+  - cargo xtask clippy
+offline_assets: []
+submission:
+  required:
+    - patch.diff
+    - regression-test-or-repro
+    - root-cause-report.md
+    - impact-analysis.md
+  optional:
+    - crash-input.bin
+    - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+    - 检查是否只针对 visible tests 打补丁
+    - 检查是否绕过真实逻辑或删除错误路径

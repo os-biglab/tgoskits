@@ -1,0 +1,200 @@
+version: 2026-s1
+name: tgoskits-bug-contest-judge
+source:
+  dockerfile: container/Dockerfile
+  workflow: .github/workflows/test.yml
+image:
+  tag: tgoskits-bug-contest:2026-s1
+  base_image: ubuntu:24.04
+  rust_toolchain: nightly-2026-02-25
+  qemu_version: 10.2.1
+  installed_tools:
+    - cargo-binutils
+    - axconfig-gen
+    - cargo-axplat
+    - dosfstools
+    - clang
+    - cmake
+    - ninja-build
+    - pkg-config
+    - python3
+  cross_toolchains:
+    - x86_64-linux-musl-cross
+    - aarch64-linux-musl-cross
+    - riscv64-linux-musl-cross
+    - loongarch64-linux-musl-cross
+  rust_targets:
+    - x86_64-unknown-none
+    - riscv64gc-unknown-none-elf
+    - aarch64-unknown-none-softfloat
+    - loongarch64-unknown-none-softfloat
+runner_defaults:
+  network: none
+  cpus: 2
+  memory: 4GiB
+  wallclock_timeout_sec: 300
+  working_directory: /workspace
+  cache_mounts:
+    - /opt/cargo/registry
+    - /opt/cargo/git
+  artifact_paths:
+    - target
+    - os/axvisor/tmp
+static_quality_gates:
+  fmt:
+    command: cargo fmt --all -- --check
+    required_for:
+      - host
+      - arceos
+      - starry
+      - axvisor
+  clippy:
+    command: cargo xtask clippy
+    required_for:
+      - host
+      - arceos
+      - starry
+      - axvisor
+track_profiles:
+  host-standard:
+    description: 宿主机基础组件题，优先对应 scripts/test/std_crates.csv 中已纳入白名单的包。
+    phase:
+      - warmup
+      - preliminary
+    resources:
+      cpus: 2
+      memory: 4GiB
+      wallclock_timeout_sec: 180
+    commands:
+      visible:
+        - cargo test -p <crate>
+      hidden:
+        - per-challenge hidden regression command for <crate>
+      quality:
+        - cargo fmt --all -- --check
+        - cargo xtask clippy
+    network: none
+    offline_assets: []
+    notes:
+      - hidden 命令按题定制，不要求仓库默认存在名为 hidden_regression 的集成测试
+  arceos-riscv64:
+    description: ArceOS 题统一固定在 riscv64，避免多架构扩大维护成本。
+    phase:
+      - warmup
+      - preliminary
+      - final
+    resources:
+      cpus: 4
+      memory: 6GiB
+      wallclock_timeout_sec: 600
+    commands:
+      visible:
+        - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+      hidden:
+        - cargo arceos test qemu --target riscv64gc-unknown-none-elf
+      quality:
+        - cargo fmt --all -- --check
+        - cargo xtask clippy
+    network: none
+    offline_assets:
+      - test-suit/arceos/*
+  starry-riscv64:
+    description: StarryOS 题固定在 riscv64，并要求官方环境预置 rootfs。
+    phase:
+      - preliminary
+      - final
+    resources:
+      cpus: 4
+      memory: 8GiB
+      wallclock_timeout_sec: 900
+    commands:
+      visible:
+        - cargo starry test qemu --target riscv64
+      hidden:
+        - cargo starry test qemu --target riscv64
+      quality:
+        - cargo fmt --all -- --check
+        - cargo xtask clippy
+    network: none
+    offline_assets:
+      - target/starry/rootfs-riscv64.img
+      - test-suit/starryos/*
+    mount_targets:
+      - asset: contest-assets/starry/rootfs-riscv64.img
+        runtime_path: target/starry/rootfs-riscv64.img
+  axvisor-aarch64:
+    description: Axvisor 题只在决赛使用，所有 guest 资源必须离线预置。
+    phase:
+      - final
+    resources:
+      cpus: 6
+      memory: 12GiB
+      wallclock_timeout_sec: 1200
+    commands:
+      visible:
+        - cargo axvisor test qemu --target aarch64
+      hidden:
+        - cargo axvisor test qemu --target aarch64
+      quality:
+        - cargo fmt --all -- --check
+        - cargo xtask clippy
+    network: none
+    offline_assets:
+      - os/axvisor/tmp/rootfs.img
+      - os/axvisor/tmp/vmconfigs/*.generated.toml
+      - contest-assets/axvisor-guests/*
+      - os/axvisor/.github/workflows/qemu-aarch64.toml
+      - os/axvisor/configs/board/qemu-aarch64.toml
+    mount_targets:
+      - asset: contest-assets/axvisor/rootfs.img
+        runtime_path: os/axvisor/tmp/rootfs.img
+      - asset: contest-assets/axvisor/vmconfigs/*.generated.toml
+        runtime_path: os/axvisor/tmp/vmconfigs/*.generated.toml
+  maintainer-review:
+    description: 开放披露赛道使用的人工复核 profile，不走统一自动判题。
+    phase:
+      - preliminary
+      - final
+    resources:
+      cpus: 1
+      memory: 1GiB
+      wallclock_timeout_sec: 0
+    commands:
+      visible:
+        - 平台接收私密披露报告、补丁与回归测试
+      hidden:
+        - 私密披露小组按需执行附加验证
+      quality:
+        - 人工核验补丁、回归测试与影响分析
+    network: none
+    offline_assets: []
+    notes:
+      - wallclock_timeout_sec 为 0 表示该 profile 不走自动运行计时，而是进入人工复核队列
+resource_policy:
+  forbid_runtime_downloads: true
+  allow_cache_reuse: true
+  preserve_failed_artifacts: true
+  keep_hidden_tests_outside_repo: true
+submission_policy:
+  required_artifacts:
+    - patch.diff
+    - regression-test-or-repro
+    - root-cause-report.md
+    - impact-analysis.md
+  optional_artifacts:
+    - crash-input.bin
+    - security-analysis.md
+ci_alignment:
+  fmt_job:
+    workflow: .github/workflows/test.yml
+    command: cargo fmt --all -- --check
+  std_job:
+    workflow: .github/workflows/test.yml
+    command: cargo xtask test
+  os_jobs:
+    - os: arceos
+      command: cargo arceos test qemu --target riscv64gc-unknown-none-elf
+    - os: starry
+      command: cargo starry test qemu --target riscv64
+    - os: axvisor
+      command: cargo axvisor test qemu --target aarch64

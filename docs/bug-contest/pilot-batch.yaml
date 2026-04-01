@@ -1,0 +1,87 @@
+pilot_name: tgoskits-campus-dry-run-2026-s1
+goal: 用 6 道 Host 题和 2 道 ArceOS 题验证比赛难度、环境稳定性与评测吞吐。
+cohort:
+  size: 24-40
+  target_students:
+    - 网络安全专业本科生
+    - 计算机专业本科生
+  team_mode:
+    - individual
+    - team_of_two
+duration:
+  warmup_days: 2
+  pilot_days: 5
+judge_profiles:
+  - host-standard
+  - arceos-riscv64
+success_thresholds:
+  judge_success_rate: ">= 95%"
+  flaky_case_rate: "<= 3%"
+  median_feedback_time_minutes: "<= 8"
+  visible_hidden_consistency: ">= 90%"
+  host_solve_rate: "40%-80%"
+  arceos_solve_rate: "20%-60%"
+challenges:
+  - id: host-memory-allocators-bundle
+    track: host
+    difficulty: L1
+    objective: 验证新手是否能在宿主机路径中完成基础定位与修复。
+    judge_profile: host-standard
+    expected_time_minutes: 60
+  - id: host-sync-timer-bundle
+    track: host
+    difficulty: L1
+    objective: 验证并发与计时类审计包是否能拉开梯度。
+    judge_profile: host-standard
+    expected_time_minutes: 75
+  - id: host-io-access-bundle
+    track: host
+    difficulty: L1
+    objective: 验证网安背景学生是否能快速进入权限与接口边界题。
+    judge_profile: host-standard
+    expected_time_minutes: 60
+  - id: host-axsched-dedicated
+    track: host
+    difficulty: L2
+    objective: 验证单组件专属题在预赛中的区分度。
+    judge_profile: host-standard
+    expected_time_minutes: 90
+  - id: host-rsext4-dedicated
+    track: host
+    difficulty: L2
+    objective: 验证文件系统题的说明成本与 hidden tests 命中率。
+    judge_profile: host-standard
+    expected_time_minutes: 120
+  - id: host-smoltcp-dedicated
+    track: host
+    difficulty: L2
+    objective: 验证协议解析题对网安学生的吸引力与稳定性。
+    judge_profile: host-standard
+    expected_time_minutes: 120
+  - id: arceos-axtask-dedicated
+    track: arceos
+    difficulty: L2
+    objective: 验证 QEMU 级题目的入门门槛与日志可读性。
+    judge_profile: arceos-riscv64
+    expected_time_minutes: 120
+  - id: arceos-axfs-dedicated
+    track: arceos
+    difficulty: L2
+    objective: 验证块设备与文件系统链路题在官方镜像中的稳定性。
+    judge_profile: arceos-riscv64
+    expected_time_minutes: 150
+observability:
+  capture:
+    - first_valid_submission_time
+    - judge_runtime
+    - retries_per_team
+    - hidden_test_fail_pattern
+    - manual_review_rejection_reason
+  dashboards:
+    - solve_rate_by_track
+    - queue_latency
+    - flaky_cases
+exit_criteria:
+  - 在 8 道试运行题中，至少 6 道题可在不改官方镜像的前提下稳定评测
+  - Host 题和 ArceOS 题都能形成明显分层
+  - 选手提交中能产生至少 3 份具备回流价值的回归测试

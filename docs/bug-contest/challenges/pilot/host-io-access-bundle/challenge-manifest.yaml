@@ -1,0 +1,56 @@
+id: host-io-access-bundle
+title: IO 与权限审计包（cap_access 多权限判定）
+track: host
+phase: pilot-formal
+difficulty: L1
+mode: audit_bundle
+tags:
+  - security-first
+  - hybrid
+baseline_ref: next
+judge_profile: host-standard
+summary: 修复 cap_access 中“请求多个权限位时只检查任意一位”的权限判定 bug。
+pilot_metadata:
+  expected_time_minutes: 60
+  competition_goal: 首批正式化试运行题
+formal_focus:
+  component: cap_access
+  bug_location: components/cap_access/src/lib.rs
+  visible_test: components/cap_access/tests/required_capabilities.rs
+  hidden_test_asset: docs/bug-contest/challenges/pilot/host-io-access-bundle/maintainer/hidden-tests/cap_access_hidden.rs
+  bug_patch: docs/bug-contest/challenges/pilot/host-io-access-bundle/maintainer/bug-introducing.patch
+  solution_patch: docs/bug-contest/challenges/pilot/host-io-access-bundle/maintainer/solution.patch
+allowed_paths:
+  - components/cap_access
+forbidden_paths:
+  - docs/bug-contest
+  - .github
+  - container
+  - scripts/repo
+focus_components:
+  - cap_access
+focus_harnesses: []
+visible_commands:
+  - cargo test -p cap_access --test required_capabilities
+hidden_commands:
+  - bash docs/bug-contest/challenges/pilot/host-io-access-bundle/maintainer/run-hidden-tests.sh
+quality_gates:
+  - cargo fmt --all -- --check
+  - cargo clippy -p cap_access --tests
+offline_assets: []
+submission:
+  required:
+    - patch.diff
+    - regression-test-or-repro
+    - root-cause-report.md
+    - impact-analysis.md
+  optional:
+    - crash-input.bin
+    - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+    - 检查是否只对 visible tests 做硬编码补丁
+    - 检查是否把权限判定改成任意位匹配或其他样例定制逻辑
+    - 检查回归测试是否真正覆盖多权限请求语义

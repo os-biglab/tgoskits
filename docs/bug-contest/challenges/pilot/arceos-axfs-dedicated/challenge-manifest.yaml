@@ -1,0 +1,56 @@
+id: arceos-axfs-dedicated
+title: ArceOS 文件系统与 shell 专属题
+track: arceos
+phase: pilot
+difficulty: L2
+mode: dedicated_challenge
+tags:
+- systems-first
+- hybrid
+baseline_ref: next
+judge_profile: arceos-riscv64
+summary: 验证块设备与文件系统链路题在官方镜像中的稳定性。
+pilot_metadata:
+  expected_time_minutes: 150
+  competition_goal: 预赛高分题
+allowed_paths:
+- os/arceos/modules/axfs
+- os/arceos/modules/axruntime
+- test-suit/arceos/rust/fs
+forbidden_paths:
+- docs/bug-contest
+- .github
+- container
+- scripts/repo
+focus_components:
+- axfs
+- axruntime
+focus_harnesses:
+- arceos-shell
+visible_commands:
+- cargo arceos test qemu --target riscv64gc-unknown-none-elf
+hidden_commands:
+- 'hidden-fs-edge: 补路径解析、目录操作与文件系统边界条件'
+- 'hidden-block-path: 验证块设备链路与 shell 命令协同'
+- 'hidden-regression: 验证相邻运行时与文件系统路径未回归'
+quality_gates:
+- cargo fmt --all -- --check
+- cargo xtask clippy
+offline_assets:
+- test-suit/arceos/*
+submission:
+  required:
+  - patch.diff
+  - regression-test-or-repro
+  - root-cause-report.md
+  - impact-analysis.md
+  optional:
+  - crash-input.bin
+  - security-analysis.md
+review:
+  manual_review_required: true
+  minimum_reviewers: 2
+  anti_cheat_checks:
+  - 检查是否只对 visible tests 做硬编码补丁
+  - 检查是否绕过真实逻辑或删除错误路径
+  - 检查回归测试是否真正覆盖根因
