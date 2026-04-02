@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "aarch64_sysreg"
-version = "0.2.1"
+version = "0.3.1"
 
 [[package]]
 name = "acpi"
@@ -230,14 +230,14 @@ checksum = "993a810118f8f37e9c4411c86f1c4c940a09a7ab34b7bf2d88d06f50c553fab7"
 
 [[package]]
 name = "arceos-affinity"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-display"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
  "embedded-graphics",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "arceos-exception"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
  "linkme",
@@ -253,31 +253,31 @@ dependencies = [
 
 [[package]]
 name = "arceos-fs-shell"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axfs_ramfs",
  "axfs_vfs",
  "axstd",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
 ]
 
 [[package]]
 name = "arceos-helloworld"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-helloworld-myplat"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axplat-aarch64-bsta1000b",
  "axplat-aarch64-phytium-pi",
  "axplat-aarch64-qemu-virt",
  "axplat-aarch64-raspi",
  "axplat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt 0.4.1",
+ "axplat-riscv64-qemu-virt 0.5.1",
  "axplat-x86-pc",
  "axstd",
  "cfg-if",
@@ -285,28 +285,28 @@ dependencies = [
 
 [[package]]
 name = "arceos-httpclient"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-httpserver"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-irq"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-memtest"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
  "rand 0.8.5",
@@ -314,35 +314,35 @@ dependencies = [
 
 [[package]]
 name = "arceos-net-echoserver"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-net-httpclient"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-net-httpserver"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-net-udpserver"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-parallel"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
  "rand 0.8.5",
@@ -350,49 +350,49 @@ dependencies = [
 
 [[package]]
 name = "arceos-priority"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-shell"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-sleep"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-tls"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-wait-queue"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos-yield"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axstd",
 ]
 
 [[package]]
 name = "arceos_api"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axconfig",
@@ -415,7 +415,7 @@ dependencies = [
 
 [[package]]
 name = "arceos_posix_api"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axconfig",
@@ -482,21 +482,21 @@ dependencies = [
 
 [[package]]
 name = "arm_pl011"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "tock-registers 0.8.1",
 ]
 
 [[package]]
 name = "arm_pl031"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
  "chrono",
 ]
 
 [[package]]
 name = "arm_vcpu"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "axaddrspace",
@@ -506,13 +506,13 @@ dependencies = [
  "axvisor_api",
  "log",
  "numeric-enum-macro",
- "percpu 0.3.3",
+ "percpu 0.4.3",
  "spin 0.10.0",
 ]
 
 [[package]]
 name = "arm_vgic"
-version = "0.3.2"
+version = "0.4.2"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "aarch64_sysreg",
@@ -522,7 +522,7 @@ dependencies = [
  "axvisor_api",
  "bitmaps",
  "log",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "spin 0.10.0",
  "tock-registers 0.10.1",
 ]
@@ -613,7 +613,7 @@ dependencies = [
 
 [[package]]
 name = "axaddrspace"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "assert_matches",
  "axerrno",
@@ -622,30 +622,30 @@ dependencies = [
  "bitflags 2.11.0",
  "cfg-if",
  "lazy_static",
- "lazyinit 0.3.2",
+ "lazyinit 0.4.2",
  "log",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "memory_set",
  "numeric-enum-macro",
- "page_table_entry 0.7.1",
- "page_table_multiarch 0.7.1",
+ "page_table_entry 0.8.1",
+ "page_table_multiarch 0.8.1",
  "spin 0.10.0",
  "x86",
 ]
 
 [[package]]
 name = "axalloc"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
- "axallocator 0.3.0",
+ "axallocator 0.4.0",
  "axbacktrace",
  "axerrno",
  "buddy-slab-allocator",
  "cfg-if",
- "kspin 0.2.1",
+ "kspin 0.3.1",
  "log",
- "memory_addr 0.5.1",
- "percpu 0.3.3",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
  "strum 0.27.2",
 ]
 
@@ -660,10 +660,10 @@ dependencies = [
 
 [[package]]
 name = "axallocator"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ax_slab_allocator",
- "axallocator 0.3.0",
+ "axallocator 0.4.0",
  "axerrno",
  "bitmap-allocator",
  "buddy_system_allocator 0.10.0",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "axbacktrace"
-version = "0.2.2"
+version = "0.3.2"
 dependencies = [
  "addr2line",
  "cfg-if",
@@ -687,7 +687,7 @@ dependencies = [
 
 [[package]]
 name = "axbuild"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "axvmconfig",
@@ -720,9 +720,9 @@ dependencies = [
 
 [[package]]
 name = "axconfig"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
- "axconfig-macros 0.3.1",
+ "axconfig-macros 0.4.1",
  "const-str",
 ]
 
@@ -738,7 +738,7 @@ dependencies = [
 
 [[package]]
 name = "axconfig-gen"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
  "clap",
  "toml_edit 0.22.27",
@@ -758,9 +758,9 @@ dependencies = [
 
 [[package]]
 name = "axconfig-macros"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
- "axconfig-gen 0.3.1",
+ "axconfig-gen 0.4.1",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -782,7 +782,7 @@ dependencies = [
  "memory_addr 0.4.1",
  "page_table_entry 0.6.1",
  "page_table_multiarch 0.6.1",
- "percpu 0.3.3",
+ "percpu 0.3.2",
  "riscv 0.16.0",
  "static_assertions",
  "tock-registers 0.10.1",
@@ -792,19 +792,19 @@ dependencies = [
 
 [[package]]
 name = "axcpu"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "axbacktrace",
  "cfg-if",
- "lazyinit 0.3.2",
+ "lazyinit 0.4.2",
  "linkme",
  "log",
  "loongArch64",
- "memory_addr 0.5.1",
- "page_table_entry 0.7.1",
- "page_table_multiarch 0.7.1",
- "percpu 0.3.3",
+ "memory_addr 0.6.1",
+ "page_table_entry 0.8.1",
+ "page_table_multiarch 0.8.1",
+ "percpu 0.4.3",
  "riscv 0.16.0",
  "tock-registers 0.10.1",
  "x86",
@@ -813,7 +813,7 @@ dependencies = [
 
 [[package]]
 name = "axdevice"
-version = "0.3.2"
+version = "0.4.2"
 dependencies = [
  "arm_vgic",
  "axaddrspace",
@@ -822,7 +822,7 @@ dependencies = [
  "axvmconfig",
  "cfg-if",
  "log",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "range-alloc-arceos",
  "riscv_vplic",
  "spin 0.10.0",
@@ -830,7 +830,7 @@ dependencies = [
 
 [[package]]
 name = "axdevice_base"
-version = "0.3.2"
+version = "0.4.2"
 dependencies = [
  "axaddrspace",
  "axerrno",
@@ -840,32 +840,32 @@ dependencies = [
 
 [[package]]
 name = "axdisplay"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axdriver",
  "axsync",
- "lazyinit 0.3.2",
+ "lazyinit 0.4.2",
  "log",
 ]
 
 [[package]]
 name = "axdma"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
- "axallocator 0.3.0",
+ "axallocator 0.4.0",
  "axconfig",
  "axhal",
  "axmm",
  "buddy-slab-allocator",
- "kspin 0.2.1",
+ "kspin 0.3.1",
  "log",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
 ]
 
 [[package]]
 name = "axdriver"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axconfig",
@@ -882,18 +882,18 @@ dependencies = [
  "axhal",
  "axplat-dyn",
  "cfg-if",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
  "log",
  "smallvec",
 ]
 
 [[package]]
 name = "axdriver_base"
-version = "0.2.4"
+version = "0.3.4"
 
 [[package]]
 name = "axdriver_block"
-version = "0.2.4"
+version = "0.3.4"
 dependencies = [
  "axdriver_base",
  "bcm2835-sdhci",
@@ -904,14 +904,14 @@ dependencies = [
 
 [[package]]
 name = "axdriver_display"
-version = "0.2.4"
+version = "0.3.4"
 dependencies = [
  "axdriver_base",
 ]
 
 [[package]]
 name = "axdriver_input"
-version = "0.2.4"
+version = "0.3.4"
 dependencies = [
  "axdriver_base",
  "strum 0.27.2",
@@ -919,7 +919,7 @@ dependencies = [
 
 [[package]]
 name = "axdriver_net"
-version = "0.2.4"
+version = "0.3.4"
 dependencies = [
  "axdriver_base",
  "fxmac_rs",
@@ -930,14 +930,14 @@ dependencies = [
 
 [[package]]
 name = "axdriver_pci"
-version = "0.2.4"
+version = "0.3.4"
 dependencies = [
  "virtio-drivers",
 ]
 
 [[package]]
 name = "axdriver_virtio"
-version = "0.2.4"
+version = "0.3.4"
 dependencies = [
  "axdriver_base",
  "axdriver_block",
@@ -951,7 +951,7 @@ dependencies = [
 
 [[package]]
 name = "axdriver_vsock"
-version = "0.2.4"
+version = "0.3.4"
 dependencies = [
  "axdriver_base",
  "log",
@@ -959,7 +959,7 @@ dependencies = [
 
 [[package]]
 name = "axerrno"
-version = "0.3.2"
+version = "0.4.2"
 dependencies = [
  "log",
  "strum 0.27.2",
@@ -977,7 +977,7 @@ dependencies = [
 
 [[package]]
 name = "axfeat"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axbacktrace",
@@ -994,12 +994,12 @@ dependencies = [
  "axruntime",
  "axsync",
  "axtask",
- "kspin 0.2.1",
+ "kspin 0.3.1",
 ]
 
 [[package]]
 name = "axfs"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axdriver",
  "axerrno",
@@ -1010,7 +1010,7 @@ dependencies = [
  "axhal",
  "axio",
  "cap_access",
- "lazyinit 0.3.2",
+ "lazyinit 0.4.2",
  "log",
  "rsext4",
  "spin 0.10.0",
@@ -1018,7 +1018,7 @@ dependencies = [
 
 [[package]]
 name = "axfs-ng"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axdriver",
@@ -1032,7 +1032,7 @@ dependencies = [
  "cfg-if",
  "chrono",
  "intrusive-collections",
- "kspin 0.2.1",
+ "kspin 0.3.1",
  "log",
  "lru 0.16.3",
  "lwext4_rust",
@@ -1044,7 +1044,7 @@ dependencies = [
 
 [[package]]
 name = "axfs-ng-vfs"
-version = "0.2.1"
+version = "0.3.1"
 dependencies = [
  "axerrno",
  "axpoll",
@@ -1059,7 +1059,7 @@ dependencies = [
 
 [[package]]
 name = "axfs_devfs"
-version = "0.2.2"
+version = "0.3.2"
 dependencies = [
  "axfs_vfs",
  "log",
@@ -1068,7 +1068,7 @@ dependencies = [
 
 [[package]]
 name = "axfs_ramfs"
-version = "0.2.2"
+version = "0.3.2"
 dependencies = [
  "axfs_vfs",
  "log",
@@ -1077,7 +1077,7 @@ dependencies = [
 
 [[package]]
 name = "axfs_vfs"
-version = "0.2.2"
+version = "0.3.2"
 dependencies = [
  "axerrno",
  "bitflags 2.11.0",
@@ -1086,32 +1086,32 @@ dependencies = [
 
 [[package]]
 name = "axhal"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axconfig",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "axplat-aarch64-qemu-virt",
  "axplat-dyn",
  "axplat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt 0.4.1",
+ "axplat-riscv64-qemu-virt 0.5.1",
  "axplat-x86-pc",
  "cfg-if",
  "fdt-parser",
  "heapless 0.9.2",
- "kernel_guard 0.2.3",
+ "kernel_guard 0.3.3",
  "linkme",
  "log",
- "memory_addr 0.5.1",
- "page_table_multiarch 0.7.1",
- "percpu 0.3.3",
+ "memory_addr 0.6.1",
+ "page_table_multiarch 0.8.1",
+ "percpu 0.4.3",
  "spin 0.10.0",
 ]
 
 [[package]]
 name = "axhvc"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "axerrno",
 ]
@@ -1130,17 +1130,17 @@ dependencies = [
 
 [[package]]
 name = "axinput"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axdriver",
  "axsync",
- "lazyinit 0.3.2",
+ "lazyinit 0.4.2",
  "log",
 ]
 
 [[package]]
 name = "axio"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "autocfg",
  "axerrno",
@@ -1150,28 +1150,28 @@ dependencies = [
 
 [[package]]
 name = "axipi"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axconfig",
  "axhal",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
- "percpu 0.3.3",
+ "percpu 0.4.3",
 ]
 
 [[package]]
 name = "axklib"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axerrno",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "trait-ffi",
 ]
 
 [[package]]
 name = "axlibc"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "arceos_posix_api",
  "axerrno",
@@ -1182,34 +1182,34 @@ dependencies = [
 
 [[package]]
 name = "axlog"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axlog",
  "cfg-if",
  "chrono",
- "crate_interface 0.4.0",
- "kspin 0.2.1",
+ "crate_interface 0.5.0",
+ "kspin 0.3.1",
  "log",
 ]
 
 [[package]]
 name = "axmm"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axerrno",
  "axhal",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "memory_set",
- "page_table_multiarch 0.7.1",
+ "page_table_multiarch 0.8.1",
 ]
 
 [[package]]
 name = "axnet"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axdriver",
  "axerrno",
@@ -1218,7 +1218,7 @@ dependencies = [
  "axsync",
  "axtask",
  "cfg-if",
- "lazyinit 0.3.2",
+ "lazyinit 0.4.2",
  "log",
  "spin 0.10.0",
  "starry-smoltcp",
@@ -1226,7 +1226,7 @@ dependencies = [
 
 [[package]]
 name = "axnet-ng"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -1270,106 +1270,106 @@ dependencies = [
 
 [[package]]
 name = "axplat"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
- "axplat-macros 0.2.0",
+ "axplat-macros 0.3.0",
  "bitflags 2.11.0",
  "const-str",
- "crate_interface 0.4.0",
- "handler_table 0.2.2",
- "kspin 0.2.1",
- "memory_addr 0.5.1",
- "percpu 0.3.3",
+ "crate_interface 0.5.0",
+ "handler_table 0.3.2",
+ "kspin 0.3.1",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
 ]
 
 [[package]]
 name = "axplat-aarch64-bsta1000b"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "axplat-aarch64-peripherals",
  "dw_apb_uart",
- "kspin 0.2.1",
+ "kspin 0.3.1",
  "log",
- "page_table_entry 0.7.1",
+ "page_table_entry 0.8.1",
 ]
 
 [[package]]
 name = "axplat-aarch64-peripherals"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "arm-gic-driver 0.16.5",
- "arm_pl011 0.2.0",
+ "arm_pl011 0.3.0",
  "arm_pl031",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "int_ratio",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
  "spin 0.10.0",
 ]
 
 [[package]]
 name = "axplat-aarch64-phytium-pi"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "axplat-aarch64-peripherals",
  "log",
- "page_table_entry 0.7.1",
+ "page_table_entry 0.8.1",
 ]
 
 [[package]]
 name = "axplat-aarch64-qemu-virt"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "axplat-aarch64-peripherals",
  "log",
- "page_table_entry 0.7.1",
+ "page_table_entry 0.8.1",
 ]
 
 [[package]]
 name = "axplat-aarch64-raspi"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "axplat-aarch64-peripherals",
  "log",
- "page_table_entry 0.7.1",
+ "page_table_entry 0.8.1",
 ]
 
 [[package]]
 name = "axplat-dyn"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "axalloc",
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
  "axdriver_base",
  "axdriver_block",
  "axdriver_virtio",
  "axerrno",
  "axklib",
- "axplat 0.4.1",
+ "axplat 0.5.1",
  "dma-api 0.7.1",
  "fdt-edit",
  "heapless 0.9.2",
  "log",
- "memory_addr 0.5.1",
- "percpu 0.3.3",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
  "rd-block",
  "rdrive",
  "somehal",
@@ -1378,17 +1378,17 @@ dependencies = [
 
 [[package]]
 name = "axplat-loongarch64-qemu-virt"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "chrono",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
  "loongArch64",
- "page_table_entry 0.7.1",
+ "page_table_entry 0.8.1",
  "uart_16550 0.5.0",
 ]
 
@@ -1405,7 +1405,7 @@ dependencies = [
 
 [[package]]
 name = "axplat-macros"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1414,36 +1414,36 @@ dependencies = [
 
 [[package]]
 name = "axplat-riscv64-qemu-virt"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "axvisor_api",
- "crate_interface 0.4.0",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "crate_interface 0.5.0",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
  "riscv 0.14.0",
  "riscv_goldfish",
- "riscv_plic 0.3.0",
+ "riscv_plic 0.4.0",
  "sbi-rt",
  "uart_16550 0.4.0",
 ]
 
 [[package]]
 name = "axplat-riscv64-qemu-virt"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
  "riscv 0.16.0",
  "riscv_goldfish",
- "riscv_plic 0.3.0",
+ "riscv_plic 0.4.0",
  "sbi-rt",
  "uart_16550 0.5.0",
 ]
@@ -1469,19 +1469,19 @@ dependencies = [
 
 [[package]]
 name = "axplat-x86-pc"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "bitflags 2.11.0",
  "heapless 0.9.2",
  "int_ratio",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
  "multiboot",
- "percpu 0.3.3",
+ "percpu 0.4.3",
  "raw-cpuid 11.6.0",
  "uart_16550 0.5.0",
  "x2apic",
@@ -1492,19 +1492,19 @@ dependencies = [
 
 [[package]]
 name = "axplat-x86-qemu-q35"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
- "axconfig-macros 0.3.1",
- "axcpu 0.4.0",
- "axplat 0.4.1",
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
  "bitflags 2.11.0",
  "heapless 0.9.2",
  "int_ratio",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
  "multiboot",
- "percpu 0.3.3",
+ "percpu 0.4.3",
  "raw-cpuid 11.6.0",
  "uart_16550 0.4.0",
  "x2apic",
@@ -1515,7 +1515,7 @@ dependencies = [
 
 [[package]]
 name = "axpoll"
-version = "0.2.2"
+version = "0.3.2"
 dependencies = [
  "bitflags 2.11.0",
  "futures",
@@ -1526,7 +1526,7 @@ dependencies = [
 
 [[package]]
 name = "axruntime"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axbacktrace",
@@ -1543,52 +1543,52 @@ dependencies = [
  "axmm",
  "axnet",
  "axnet-ng",
- "axplat 0.4.1",
+ "axplat 0.5.1",
  "axtask",
  "cfg-if",
  "chrono",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
  "ctor_bare",
  "indoc",
- "percpu 0.3.3",
+ "percpu 0.4.3",
 ]
 
 [[package]]
 name = "axsched"
-version = "0.4.1"
+version = "0.5.1"
 dependencies = [
  "linked_list_r4l",
 ]
 
 [[package]]
 name = "axstd"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "arceos_api",
  "axerrno",
  "axfeat",
  "axio",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "lock_api",
  "spin 0.10.0",
 ]
 
 [[package]]
 name = "axsync"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axsync",
  "axtask",
  "event-listener",
  "fastrand",
- "kspin 0.2.1",
+ "kspin 0.3.1",
  "lock_api",
 ]
 
 [[package]]
 name = "axtask"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axconfig",
  "axerrno",
@@ -1598,16 +1598,16 @@ dependencies = [
  "axtask",
  "cfg-if",
  "cpumask",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
  "event-listener",
  "extern-trait",
  "futures-util",
- "kernel_guard 0.2.3",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kernel_guard 0.3.3",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "log",
- "memory_addr 0.5.1",
- "percpu 0.3.3",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
  "spin 0.10.0",
 ]
 
@@ -1665,18 +1665,18 @@ dependencies = [
 
 [[package]]
 name = "axvcpu"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axaddrspace",
  "axerrno",
  "axvisor_api",
- "memory_addr 0.5.1",
- "percpu 0.3.3",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
 ]
 
 [[package]]
 name = "axvisor"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "aarch64-cpu-ext",
  "anyhow",
@@ -1690,7 +1690,7 @@ dependencies = [
  "axhal",
  "axhvc",
  "axklib",
- "axplat-riscv64-qemu-virt 0.4.0",
+ "axplat-riscv64-qemu-virt 0.5.0",
  "axplat-x86-qemu-q35",
  "axstd",
  "axvcpu",
@@ -1701,20 +1701,20 @@ dependencies = [
  "cfg-if",
  "clap",
  "cpumask",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
  "extern-trait",
  "fdt-parser",
  "hashbrown 0.14.5",
- "kernel_guard 0.2.3",
- "kspin 0.2.1",
+ "kernel_guard 0.3.3",
+ "kspin 0.3.1",
  "lazy_static",
- "lazyinit 0.3.2",
+ "lazyinit 0.4.2",
  "log",
- "memory_addr 0.5.1",
- "page_table_entry 0.7.1",
- "page_table_multiarch 0.7.1",
+ "memory_addr 0.6.1",
+ "page_table_entry 0.8.1",
+ "page_table_multiarch 0.8.1",
  "pcie 0.5.0",
- "percpu 0.3.3",
+ "percpu 0.4.3",
  "phytium-mci",
  "prettyplease",
  "quote",
@@ -1738,18 +1738,18 @@ dependencies = [
 
 [[package]]
 name = "axvisor_api"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axaddrspace",
  "axvisor_api_proc",
  "cpumask",
- "crate_interface 0.4.0",
- "memory_addr 0.5.1",
+ "crate_interface 0.5.0",
+ "memory_addr 0.6.1",
 ]
 
 [[package]]
 name = "axvisor_api_proc"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1759,7 +1759,7 @@ dependencies = [
 
 [[package]]
 name = "axvm"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "arm_vcpu",
  "arm_vgic",
@@ -1773,10 +1773,10 @@ dependencies = [
  "cfg-if",
  "cpumask",
  "log",
- "memory_addr 0.5.1",
- "page_table_entry 0.7.1",
- "page_table_multiarch 0.7.1",
- "percpu 0.3.3",
+ "memory_addr 0.6.1",
+ "page_table_entry 0.8.1",
+ "page_table_multiarch 0.8.1",
+ "percpu 0.4.3",
  "riscv_vcpu",
  "spin 0.10.0",
  "x86_vcpu",
@@ -1784,7 +1784,7 @@ dependencies = [
 
 [[package]]
 name = "axvmconfig"
-version = "0.3.2"
+version = "0.4.2"
 dependencies = [
  "axerrno",
  "clap",
@@ -1913,7 +1913,7 @@ checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
 
 [[package]]
 name = "bitmap-allocator"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
  "bit_field",
 ]
@@ -2077,7 +2077,7 @@ dependencies = [
 
 [[package]]
 name = "cap_access"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bitflags 2.11.0",
 ]
@@ -2415,7 +2415,7 @@ dependencies = [
 
 [[package]]
 name = "cpumask"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bitmaps",
 ]
@@ -2444,7 +2444,7 @@ dependencies = [
 
 [[package]]
 name = "crate_interface"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2645,14 +2645,14 @@ checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
 
 [[package]]
 name = "ctor_bare"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
  "ctor_bare_macros",
 ]
 
 [[package]]
 name = "ctor_bare_macros"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3519,10 +3519,10 @@ dependencies = [
 
 [[package]]
 name = "fxmac_rs"
-version = "0.3.1"
+version = "0.4.1"
 dependencies = [
  "aarch64-cpu 10.0.0",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
  "log",
 ]
 
@@ -3638,7 +3638,7 @@ checksum = "702cb690200d6303c1e1992bc648f3f3bf9c1d6a27fcf50551c513d61f339c99"
 
 [[package]]
 name = "handler_table"
-version = "0.2.2"
+version = "0.3.2"
 
 [[package]]
 name = "hash32"
@@ -4104,7 +4104,7 @@ dependencies = [
 
 [[package]]
 name = "int_ratio"
-version = "0.2.2"
+version = "0.3.2"
 
 [[package]]
 name = "intrusive-collections"
@@ -4343,10 +4343,10 @@ dependencies = [
 
 [[package]]
 name = "kernel_guard"
-version = "0.2.3"
+version = "0.3.3"
 dependencies = [
  "cfg-if",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
 ]
 
 [[package]]
@@ -4372,10 +4372,10 @@ dependencies = [
 
 [[package]]
 name = "kspin"
-version = "0.2.1"
+version = "0.3.1"
 dependencies = [
  "cfg-if",
- "kernel_guard 0.2.3",
+ "kernel_guard 0.3.3",
 ]
 
 [[package]]
@@ -4395,7 +4395,7 @@ checksum = "17f03abfebdaaf0fad16790237a0348baf84886d3ade460db13bae59e614a180"
 
 [[package]]
 name = "lazyinit"
-version = "0.3.2"
+version = "0.4.2"
 
 [[package]]
 name = "leb128fmt"
@@ -4493,7 +4493,7 @@ dependencies = [
 
 [[package]]
 name = "linked_list_r4l"
-version = "0.4.0"
+version = "0.5.0"
 
 [[package]]
 name = "linkme"
@@ -4675,14 +4675,14 @@ checksum = "b1f0625c50adb5f6aaf47f05cae3c4dbc13a74c659241b06c4576f3d7e1da940"
 
 [[package]]
 name = "memory_addr"
-version = "0.5.1"
+version = "0.6.1"
 
 [[package]]
 name = "memory_set"
-version = "0.5.1"
+version = "0.6.1"
 dependencies = [
  "axerrno",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
 ]
 
 [[package]]
@@ -5037,11 +5037,11 @@ dependencies = [
 
 [[package]]
 name = "page_table_entry"
-version = "0.7.1"
+version = "0.8.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "bitflags 2.11.0",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "x86_64",
 ]
 
@@ -5061,14 +5061,14 @@ dependencies = [
 
 [[package]]
 name = "page_table_multiarch"
-version = "0.7.1"
+version = "0.8.1"
 dependencies = [
  "arrayvec",
  "axerrno",
  "bitmaps",
  "log",
- "memory_addr 0.5.1",
- "page_table_entry 0.7.1",
+ "memory_addr 0.6.1",
+ "page_table_entry 0.8.1",
  "riscv 0.16.0",
  "x86",
 ]
@@ -5162,11 +5162,22 @@ dependencies = [
 
 [[package]]
 name = "percpu"
-version = "0.3.3"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2a4c33508cf5a2e8ddccee074a1e5e7c2d5ca91341da8656268eb437bf4f8a2"
 dependencies = [
  "cfg-if",
- "kernel_guard 0.2.3",
- "percpu_macros 0.3.3",
+ "percpu_macros 0.3.2",
+ "x86",
+]
+
+[[package]]
+name = "percpu"
+version = "0.4.3"
+dependencies = [
+ "cfg-if",
+ "kernel_guard 0.3.3",
+ "percpu_macros 0.4.3",
  "spin 0.10.0",
  "x86",
 ]
@@ -5185,7 +5196,18 @@ dependencies = [
 
 [[package]]
 name = "percpu_macros"
-version = "0.3.3"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d0188f16e062758e306b2f9fdd235c1e297f34e9423ab1f1ce11324dd5f2da1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "percpu_macros"
+version = "0.4.3"
 dependencies = [
  "cfg-if",
  "proc-macro2",
@@ -5555,7 +5577,7 @@ checksum = "0c8d0fd677905edcbeedbf2edb6494d676f0e98d54d5cf9bda0b061cb8fb8aba"
 
 [[package]]
 name = "range-alloc-arceos"
-version = "0.2.4"
+version = "0.3.4"
 
 [[package]]
 name = "ranges-ext"
@@ -5942,7 +5964,7 @@ checksum = "68b59d645e392e041ad18f5e529ed13242d8405c66bb192f59703ea2137017d0"
 
 [[package]]
 name = "riscv-h"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "bare-metal",
  "bit_field",
@@ -6002,14 +6024,14 @@ dependencies = [
 
 [[package]]
 name = "riscv_plic"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "tock-registers 0.10.1",
 ]
 
 [[package]]
 name = "riscv_vcpu"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axaddrspace",
  "axerrno",
@@ -6018,11 +6040,11 @@ dependencies = [
  "bit_field",
  "bitflags 2.11.0",
  "cfg-if",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
  "log",
  "memoffset",
- "memory_addr 0.5.1",
- "page_table_entry 0.7.1",
+ "memory_addr 0.6.1",
+ "page_table_entry 0.8.1",
  "riscv 0.14.0",
  "riscv-decode",
  "riscv-h",
@@ -6034,7 +6056,7 @@ dependencies = [
 
 [[package]]
 name = "riscv_vplic"
-version = "0.3.2"
+version = "0.4.2"
 dependencies = [
  "axaddrspace",
  "axdevice_base",
@@ -6128,7 +6150,7 @@ dependencies = [
 
 [[package]]
 name = "rsext4"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bitflags 2.11.0",
  "lazy_static",
@@ -6405,10 +6427,10 @@ dependencies = [
 
 [[package]]
 name = "scope-local"
-version = "0.2.2"
+version = "0.3.2"
 dependencies = [
  "ctor 0.6.3",
- "percpu 0.3.3",
+ "percpu 0.4.3",
  "spin 0.10.0",
 ]
 
@@ -6740,7 +6762,7 @@ dependencies = [
 
 [[package]]
 name = "smoltcp"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "bitflags 1.3.2",
  "byteorder",
@@ -6931,7 +6953,7 @@ dependencies = [
 
 [[package]]
 name = "starry-kernel"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axalloc",
  "axbacktrace",
@@ -6967,18 +6989,18 @@ dependencies = [
  "indoc",
  "inherit-methods-macro",
  "kernel-elf-parser",
- "kernel_guard 0.2.3",
- "kspin 0.2.1",
+ "kernel_guard 0.3.3",
+ "kspin 0.3.1",
  "lazy_static",
  "linkme",
  "linux-raw-sys 0.12.1",
  "lock_api",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "memory_set",
  "num_enum",
  "ouroboros",
- "page_table_multiarch 0.7.1",
- "percpu 0.3.3",
+ "page_table_multiarch 0.8.1",
+ "percpu 0.4.3",
  "rand 0.10.0",
  "ringbuf",
  "riscv 0.16.0",
@@ -6999,25 +7021,25 @@ dependencies = [
 
 [[package]]
 name = "starry-process"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "ctor 0.4.3",
- "kspin 0.2.1",
- "lazyinit 0.3.2",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
  "weak-map",
 ]
 
 [[package]]
 name = "starry-signal"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
- "axcpu 0.4.0",
+ "axcpu 0.5.0",
  "bitflags 2.11.0",
  "cfg-if",
  "derive_more",
  "event-listener",
  "extern-trait",
- "kspin 0.2.1",
+ "kspin 0.3.1",
  "linux-raw-sys 0.12.1",
  "log",
  "starry-vm",
@@ -7041,7 +7063,7 @@ dependencies = [
 
 [[package]]
 name = "starry-vm"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axerrno",
  "bytemuck",
@@ -7050,7 +7072,7 @@ dependencies = [
 
 [[package]]
 name = "starryos"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "axbuild",
@@ -7063,7 +7085,7 @@ dependencies = [
 
 [[package]]
 name = "starryos-test"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axfeat",
  "axplat-riscv64-visionfive2",
@@ -7287,7 +7309,7 @@ checksum = "e5416993d37cd34e93dbb9ca8777dda4d0c6e307661c5d519fd88e2a70a1f20b"
 
 [[package]]
 name = "tg-xtask"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "axbuild",
@@ -7296,7 +7318,7 @@ dependencies = [
 
 [[package]]
 name = "tgmath"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "thiserror"
@@ -7382,7 +7404,7 @@ dependencies = [
 
 [[package]]
 name = "timer_list"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "tinystr"
@@ -8758,7 +8780,7 @@ dependencies = [
 
 [[package]]
 name = "x86_vcpu"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "axaddrspace",
  "axdevice_base",
@@ -8768,11 +8790,11 @@ dependencies = [
  "bit_field",
  "bitflags 2.11.0",
  "cfg-if",
- "crate_interface 0.4.0",
+ "crate_interface 0.5.0",
  "log",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "numeric-enum-macro",
- "page_table_entry 0.7.1",
+ "page_table_entry 0.8.1",
  "paste",
  "raw-cpuid 11.6.0",
  "spin 0.10.0",
@@ -8783,7 +8805,7 @@ dependencies = [
 
 [[package]]
 name = "x86_vlapic"
-version = "0.3.2"
+version = "0.4.2"
 dependencies = [
  "axaddrspace",
  "axdevice_base",
@@ -8791,7 +8813,7 @@ dependencies = [
  "axvisor_api",
  "bit",
  "log",
- "memory_addr 0.5.1",
+ "memory_addr 0.6.1",
  "paste",
  "tock-registers 0.10.1",
 ]
@@ -8964,4 +8986,24 @@ checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
 
 [[patch.unused]]
 name = "crate_interface_lite"
-version = "0.2.0"
+version = "0.3.0"
+
+[[patch.unused]]
+name = "define-simple-traits"
+version = "0.3.0"
+
+[[patch.unused]]
+name = "define-weak-traits"
+version = "0.3.0"
+
+[[patch.unused]]
+name = "impl-simple-traits"
+version = "0.3.0"
+
+[[patch.unused]]
+name = "impl-weak-partial"
+version = "0.3.0"
+
+[[patch.unused]]
+name = "impl-weak-traits"
+version = "0.3.0"
