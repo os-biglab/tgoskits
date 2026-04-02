@@ -1,0 +1,1 @@
+CASE mincore.efault ret=-1 errno=14 note=handwritten

@@ -367,175 +367,90 @@ entries:
   notes:
   - B04-io contract probe
 - syscall: epoll_create1
-  parity: not_applicable
-  planned_contract_probe: epoll_create1_einval
+  contract_probe: epoll_create1_einval
+  parity: partial
   notes:
-  - rollout_batch=B05-io-mpx
-  - suggested_case=invalid flags -> EINVAL
-  - probe_pattern=special
-  - handler=sys_epoll_create1
-  - section=io mpx
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B05-io-mpx contract probe
 - syscall: epoll_ctl
-  parity: not_applicable
-  planned_contract_probe: epoll_ctl_badfd
+  contract_probe: epoll_ctl_badfd
+  parity: partial
   notes:
-  - rollout_batch=B05-io-mpx
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_epoll_ctl
-  - section=io mpx
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B05-io-mpx contract probe
 - syscall: epoll_pwait
-  parity: not_applicable
-  planned_contract_probe: epoll_pwait_badfd
+  contract_probe: epoll_pwait_badfd
+  parity: partial
   notes:
-  - rollout_batch=B05-io-mpx
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_epoll_pwait
-  - section=io mpx
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B05-io-mpx contract probe
 - syscall: epoll_pwait2
-  parity: not_applicable
-  planned_contract_probe: epoll_pwait2_badfd
+  contract_probe: epoll_pwait2_badfd
+  parity: partial
   notes:
-  - rollout_batch=B05-io-mpx
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_epoll_pwait2
-  - section=io mpx
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B05-io-mpx contract probe
 - syscall: poll
-  parity: not_applicable
-  planned_contract_probe: poll_linux_contract_p1
+  contract_probe: poll_linux_contract_p1
+  parity: partial
   notes:
-  - rollout_batch=B05-io-mpx
-  - suggested_case=pick minimal errno oracle case per man 2
-  - probe_pattern=tbd_errno
-  - handler=sys_poll
-  - section=io mpx
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B05-io-mpx contract probe
 - syscall: pselect6
-  parity: not_applicable
-  planned_contract_probe: pselect6_linux_contract_p1
+  contract_probe: pselect6_linux_contract_p1
+  parity: partial
   notes:
-  - rollout_batch=B05-io-mpx
-  - suggested_case=pick minimal errno oracle case per man 2
-  - probe_pattern=tbd_errno
-  - handler=sys_pselect6
-  - section=io mpx
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B05-io-mpx contract probe
 - syscall: select
-  parity: not_applicable
-  planned_contract_probe: select_linux_contract_p1
+  contract_probe: select_linux_contract_p1
+  parity: partial
   notes:
-  - rollout_batch=B05-io-mpx
-  - suggested_case=pick minimal errno oracle case per man 2
-  - probe_pattern=tbd_errno
-  - handler=sys_select
-  - section=io mpx
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B05-io-mpx contract probe
 - syscall: brk
-  parity: not_applicable
-  planned_contract_probe: brk_increment_smoke
+  contract_probe: brk_increment_smoke
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=increment 0 returns current brk; compare shape
-  - probe_pattern=special
-  - handler=sys_brk
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: madvise
-  parity: not_applicable
-  planned_contract_probe: madvise_einval
+  contract_probe: madvise_einval
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=invalid advice -> EINVAL
-  - probe_pattern=special
-  - handler=sys_madvise
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: mincore
-  parity: not_applicable
-  planned_contract_probe: mincore_efault
+  contract_probe: mincore_efault
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=invalid vec -> EFAULT
-  - probe_pattern=special
-  - handler=sys_mincore
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: mlock
-  parity: not_applicable
-  planned_contract_probe: mlock_eagain
+  contract_probe: mlock_enomem
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=over limit -> EAGAIN/ENOMEM
-  - probe_pattern=special
-  - handler=sys_mlock
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: mlock2
-  parity: not_applicable
-  planned_contract_probe: mlock2_einval
+  contract_probe: mlock2_einval
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=bad flags -> EINVAL
-  - probe_pattern=special
-  - handler=sys_mlock2
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: mmap
-  parity: not_applicable
-  planned_contract_probe: mmap_nonanon_badfd
+  contract_probe: mmap_nonanon_badfd
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=MAP_ANONYMOUS cleared + fd=-1 -> EBADF on Linux; flags TBD in contract
-  - probe_pattern=special
-  - handler=sys_mmap
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: mprotect
-  parity: not_applicable
-  planned_contract_probe: mprotect_einval
+  contract_probe: mprotect_einval
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=NULL len 0 -> EINVAL
-  - probe_pattern=special
-  - handler=sys_mprotect
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: mremap
-  parity: not_applicable
-  planned_contract_probe: mremap_einval
+  contract_probe: mremap_einval
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=invalid old_address -> EINVAL
-  - probe_pattern=special
-  - handler=sys_mremap
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: msync
-  parity: not_applicable
-  planned_contract_probe: msync_einval
+  contract_probe: msync_einval
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=invalid flags -> EINVAL
-  - probe_pattern=special
-  - handler=sys_msync
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: munmap
-  parity: not_applicable
-  planned_contract_probe: munmap_einval
+  contract_probe: munmap_einval
+  parity: partial
   notes:
-  - rollout_batch=B06-mm
-  - suggested_case=NULL len mismatch -> EINVAL
-  - probe_pattern=special
-  - handler=sys_munmap
-  - section=mm
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B06-mm contract probe
 - syscall: access
   parity: not_applicable
   planned_contract_probe: access_enoent

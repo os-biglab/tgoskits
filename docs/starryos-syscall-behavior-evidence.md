@@ -75,14 +75,14 @@
 | `sendfile` | `sys_sendfile` | partial | sendfile_badfd | sendfile_badfd |
 | `copy_file_range` | `sys_copy_file_range` | partial | copy_file_range_badfd | copy_file_range_badfd |
 | `splice` | `sys_splice` | partial | splice_badfd | splice_badfd |
-| `poll` | `sys_poll` | not_applicable | (planned) poll_linux_contract_p1 | — |
+| `poll` | `sys_poll` | partial | poll_linux_contract_p1 | poll_linux_contract_p1 |
 | `ppoll` | `sys_ppoll` | partial | ppoll_zero_fds | ppoll_zero_fds |
-| `select` | `sys_select` | not_applicable | (planned) select_linux_contract_p1 | — |
-| `pselect6` | `sys_pselect6` | not_applicable | (planned) pselect6_linux_contract_p1 | — |
-| `epoll_create1` | `sys_epoll_create1` | not_applicable | (planned) epoll_create1_einval | — |
-| `epoll_ctl` | `sys_epoll_ctl` | not_applicable | (planned) epoll_ctl_badfd | — |
-| `epoll_pwait` | `sys_epoll_pwait` | not_applicable | (planned) epoll_pwait_badfd | — |
-| `epoll_pwait2` | `sys_epoll_pwait2` | not_applicable | (planned) epoll_pwait2_badfd | — |
+| `select` | `sys_select` | partial | select_linux_contract_p1 | select_linux_contract_p1 |
+| `pselect6` | `sys_pselect6` | partial | pselect6_linux_contract_p1 | pselect6_linux_contract_p1 |
+| `epoll_create1` | `sys_epoll_create1` | partial | epoll_create1_einval | epoll_create1_einval |
+| `epoll_ctl` | `sys_epoll_ctl` | partial | epoll_ctl_badfd | epoll_ctl_badfd |
+| `epoll_pwait` | `sys_epoll_pwait` | partial | epoll_pwait_badfd | epoll_pwait_badfd |
+| `epoll_pwait2` | `sys_epoll_pwait2` | partial | epoll_pwait2_badfd | epoll_pwait2_badfd |
 | `mount` | `sys_mount` | not_applicable | (planned) mount_enoent | — |
 | `umount2` | `sys_umount2` | not_applicable | (planned) umount2_enoent | — |
 | `pipe2` | `sys_pipe2` | partial | pipe2_nullfd | pipe2_nullfd |
@@ -103,16 +103,16 @@
 | `faccessat2` | `sys_faccessat2` | not_applicable | (planned) faccessat2_enoent | — |
 | `statfs` | `sys_statfs` | not_applicable | (planned) statfs_linux_contract_p1 | — |
 | `fstatfs` | `sys_fstatfs` | not_applicable | (planned) fstatfs_badfd | — |
-| `brk` | `sys_brk` | not_applicable | (planned) brk_increment_smoke | — |
-| `mmap` | `sys_mmap` | not_applicable | (planned) mmap_nonanon_badfd | — |
-| `munmap` | `sys_munmap` | not_applicable | (planned) munmap_einval | — |
-| `mprotect` | `sys_mprotect` | not_applicable | (planned) mprotect_einval | — |
-| `mincore` | `sys_mincore` | not_applicable | (planned) mincore_efault | — |
-| `mremap` | `sys_mremap` | not_applicable | (planned) mremap_einval | — |
-| `madvise` | `sys_madvise` | not_applicable | (planned) madvise_einval | — |
-| `msync` | `sys_msync` | not_applicable | (planned) msync_einval | — |
-| `mlock` | `sys_mlock` | not_applicable | (planned) mlock_eagain | — |
-| `mlock2` | `sys_mlock2` | not_applicable | (planned) mlock2_einval | — |
+| `brk` | `sys_brk` | partial | brk_increment_smoke | brk_increment_smoke |
+| `mmap` | `sys_mmap` | partial | mmap_nonanon_badfd | mmap_nonanon_badfd |
+| `munmap` | `sys_munmap` | partial | munmap_einval | munmap_einval |
+| `mprotect` | `sys_mprotect` | partial | mprotect_einval | mprotect_einval |
+| `mincore` | `sys_mincore` | partial | mincore_efault | mincore_efault |
+| `mremap` | `sys_mremap` | partial | mremap_einval | mremap_einval |
+| `madvise` | `sys_madvise` | partial | madvise_einval | madvise_einval |
+| `msync` | `sys_msync` | partial | msync_einval | msync_einval |
+| `mlock` | `sys_mlock` | partial | mlock_enomem | mlock_enomem |
+| `mlock2` | `sys_mlock2` | partial | mlock2_einval | mlock2_einval |
 | `getpid` | `sys_getpid` | not_applicable | (planned) getpid_linux_contract_p1 | — |
 | `getppid` | `sys_getppid` | not_applicable | (planned) getppid_linux_contract_p1 | — |
 | `gettid` | `sys_gettid` | not_applicable | (planned) gettid_linux_contract_p1 | — |
