@@ -34,6 +34,7 @@ class CompareResult:
     repo: str
     ahead_by: int | None
     behind_by: int | None
+    diff_lines: int | None
     status: str
     detail: str
 
@@ -125,20 +126,66 @@ def compare_branches(owner: str, repo: str) -> CompareResult:
                 ],
                 cwd=tmp_path,
             )
+            numstat_proc = run(
+                [
+                    "git",
+                    "diff",
+                    "--numstat",
+                    "refs/remotes/origin/main..refs/remotes/origin/dev",
+                ],
+                cwd=tmp_path,
+            )
         except subprocess.CalledProcessError as exc:
             detail = (exc.stderr or exc.stdout or "").strip()
             if "couldn't find remote ref" in detail or "fatal: couldn't find remote ref" in detail:
-                return CompareResult(owner, repo, None, None, "MISSING", detail)
-            return CompareResult(owner, repo, None, None, "ERROR", detail or f"git exit {exc.returncode}")
+                return CompareResult(owner, repo, None, None, None, "MISSING", detail)
+            return CompareResult(owner, repo, None, None, None, "ERROR", detail or f"git exit {exc.returncode}")
 
     parts = proc.stdout.strip().split()
     if len(parts) != 2:
-        return CompareResult(owner, repo, None, None, "ERROR", f"unexpected rev-list output: {proc.stdout.strip()}")
+        return CompareResult(
+            owner,
+            repo,
+            None,
+            None,
+            None,
+            "ERROR",
+            f"unexpected rev-list output: {proc.stdout.strip()}",
+        )
     try:
         behind_by = int(parts[0])
         ahead_by = int(parts[1])
     except ValueError:
-        return CompareResult(owner, repo, None, None, "ERROR", f"unexpected rev-list output: {proc.stdout.strip()}")
+        return CompareResult(
+            owner,
+            repo,
+            None,
+            None,
+            None,
+            "ERROR",
+            f"unexpected rev-list output: {proc.stdout.strip()}",
+        )
+
+    diff_lines = 0
+    for line in numstat_proc.stdout.splitlines():
+        parts = line.split("\t", 2)
+        if len(parts) < 2:
+            continue
+        added, deleted = parts[0], parts[1]
+        if added == "-" or deleted == "-":
+            continue
+        try:
+            diff_lines += int(added) + int(deleted)
+        except ValueError:
+            return CompareResult(
+                owner,
+                repo,
+                ahead_by,
+                behind_by,
+                None,
+                "ERROR",
+                f"unexpected numstat output: {line}",
+            )
 
     if ahead_by == 0 and behind_by == 0:
         status = "IDENTICAL"
@@ -148,19 +195,20 @@ def compare_branches(owner: str, repo: str) -> CompareResult:
         status = "BEHIND"
     else:
         status = "DIVERGED"
-    return CompareResult(owner, repo, ahead_by, behind_by, status, "")
+    return CompareResult(owner, repo, ahead_by, behind_by, diff_lines, status, "")
 
 
 def print_table(results: list[CompareResult]) -> None:
-    print(f"{'repo':32} {'ahead(dev-main)':>15} {'behind(dev-main)':>16} status")
-    print("-" * 80)
+    print(f"{'repo':32} {'ahead(dev-main)':>15} {'behind(dev-main)':>16} {'diff_lines':>12} status")
+    print("-" * 94)
     for item in results:
         ahead = "-" if item.ahead_by is None else str(item.ahead_by)
         behind = "-" if item.behind_by is None else str(item.behind_by)
+        diff_lines = "-" if item.diff_lines is None else str(item.diff_lines)
         status = item.status
         if item.detail:
             status = f"{status}: {item.detail}"
-        print(f"{item.repo:32} {ahead:>15} {behind:>16} {status}")
+        print(f"{item.repo:32} {ahead:>15} {behind:>16} {diff_lines:>12} {status}")
 
 
 def main() -> int:
@@ -198,6 +246,7 @@ def main() -> int:
                         "repo": item.repo,
                         "ahead_by": item.ahead_by,
                         "behind_by": item.behind_by,
+                        "diff_lines": item.diff_lines,
                         "status": item.status,
                         "detail": item.detail,
                     }
