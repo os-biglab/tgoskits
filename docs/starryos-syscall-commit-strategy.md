@@ -55,5 +55,6 @@ cargo fmt -p axbuild && cargo clippy -p axbuild -- -D warnings   # 若含 axbuil
 
 ## 与 `VERIFY_STRICT` / QEMU
 
-- 默认 CI 不要求安装 `qemu-riscv64`：`scripts/starryos-probes-ci.sh` 只做静态检查与可选交叉编译。
+- 默认 CI 不要求安装 `qemu-riscv64`：`scripts/starryos-probes-ci.sh` 只做静态检查与可选交叉编译；其中兼容矩阵检查带 `--require-guest-golden`（partial/aligned 须有已提交的 `expected/guest-alpine323/` 金线）。
 - 需要 Linux oracle 时，在独立 job 安装 `qemu-user` 并执行 `VERIFY_STRICT=1 test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all`（参见 `docs/starryos-probes-ci-example.md`）。
+- 刷新行为证据大表（含 **guest_golden** 列，与上述守门一致）：`python3 scripts/render_starry_syscall_inventory.py --step 3`。

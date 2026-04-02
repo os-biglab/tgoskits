@@ -110,6 +110,17 @@ def probe_basenames_from_catalog_tests(tests: list) -> str:
     return ", ".join(out) if out else "—"
 
 
+def guest_golden_committed(root: Path, contract_probe: str) -> str:
+    """Whether expected/guest-alpine323 has a line/cases file for matrix contract_probe."""
+    stem = (contract_probe or "").strip()
+    if not stem:
+        return "—"
+    guest = root / "test-suit" / "starryos" / "probes" / "expected" / "guest-alpine323"
+    if (guest / f"{stem}.line").is_file() or (guest / f"{stem}.cases").is_file():
+        return "yes"
+    return "no"
+
+
 def write_dispatch_table(rows: list[dict], path: Path, title: str, intro: str) -> None:
     lines = [
         title,
@@ -171,6 +182,7 @@ def write_behavior_table(
     catalog: dict[str, dict],
     matrix: dict[str, dict],
     path: Path,
+    root: Path,
 ) -> None:
     lines = [
         "# StarryOS syscall 行为证据（Linux oracle / guest 矩阵）",
@@ -178,6 +190,7 @@ def write_behavior_table(
         "由 `scripts/render_starry_syscall_inventory.py --step 3` 生成。",
         "",
         "- **matrix_probe**：矩阵 `contract_probe`；若仅有脚手架则显示 `(planned) …`（来自 `planned_contract_probe`，见 [docs/starryos-syscall-probe-rollout.yaml](docs/starryos-syscall-probe-rollout.yaml)）。",
+        "- **guest_golden**：仓库内是否已有 `expected/guest-alpine323/<contract_probe>.line` 或 `.cases`；矩阵尚未设 `contract_probe` 时为 —。与 CI 守门一致：`scripts/starryos-probes-ci.sh` 对 **partial/aligned** 行要求 guest 金线已提交（阶段 C/D）。",
         "- **catalog_probes**：catalog `tests:` 中的 contract 文件名（不含路径）。",
         "- **matrix_parity**：矩阵 `parity`（无行则为 —）。",
         "",
@@ -188,8 +201,8 @@ def write_behavior_table(
         "",
         f"**分发表条目数**: {len(rows)}",
         "",
-        "| syscall | handler | matrix_parity | matrix_probe | catalog_probes |",
-        "|---------|---------|---------------|--------------|----------------|",
+        "| syscall | handler | matrix_parity | matrix_probe | guest_golden | catalog_probes |",
+        "|---------|---------|---------------|--------------|--------------|----------------|",
     ]
     dispatch_names = {r["syscall"] for r in rows}
     for r in rows:
@@ -205,10 +218,11 @@ def write_behavior_table(
             mprobe = f"(planned) {pprobe}"
         else:
             mprobe = "—"
+        ggc = guest_golden_committed(root, cprobe)
         cat = catalog.get(name)
         cprobes = probe_basenames_from_catalog_tests(cat.get("tests") if cat else [])
         lines.append(
-            f"| `{md_cell(name)}` | `{md_cell(h)}` | {md_cell(parity)} | {md_cell(mprobe)} | {md_cell(cprobes)} |"
+            f"| `{md_cell(name)}` | `{md_cell(h)}` | {md_cell(parity)} | {md_cell(mprobe)} | {md_cell(ggc)} | {md_cell(cprobes)} |"
         )
     lines.append("")
     extra = sorted(k for k in matrix if k not in dispatch_names)
@@ -217,16 +231,18 @@ def write_behavior_table(
             [
                 "## 兼容矩阵中有、但不在分发表 JSON 中的条目",
                 "",
-                "| syscall | matrix_parity | matrix_probe | notes |",
-                "|---------|---------------|--------------|-------|",
+                "| syscall | matrix_parity | matrix_probe | guest_golden | notes |",
+                "|---------|---------------|--------------|--------------|-------|",
             ]
         )
         for k in extra:
             mat = matrix[k]
             parity = str(mat.get("parity", ""))
             mprobe = str(mat.get("contract_probe", "") or "").strip() or "—"
+            cstem = str(mat.get("contract_probe", "") or "").strip()
+            ggc = guest_golden_committed(root, cstem)
             notes = "; ".join(mat.get("notes") or []) or "—"
-            lines.append(f"| `{md_cell(k)}` | {md_cell(parity)} | {md_cell(mprobe)} | {md_cell(notes)} |")
+            lines.append(f"| `{md_cell(k)}` | {md_cell(parity)} | {md_cell(mprobe)} | {md_cell(ggc)} | {md_cell(notes)} |")
         lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -287,7 +303,7 @@ def main() -> int:
             return 1
         catalog = load_catalog(root)
         matrix = load_matrix(root)
-        write_behavior_table(rows, handlers, catalog, matrix, out3)
+        write_behavior_table(rows, handlers, catalog, matrix, out3, root)
         print(f"Wrote {out3}")
 
     return 0
