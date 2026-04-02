@@ -1,0 +1,1 @@
+CASE brk_increment.smoke ret=0 errno=0 note=handwritten

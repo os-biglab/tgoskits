@@ -15,6 +15,7 @@ GUEST_SCRIPT="$ROOT/scripts/run_linux_guest_oracle.sh"
 OUT="${PROBE_OUT:-$ROOT/test-suit/starryos/probes/build-riscv64}"
 DEST="$ROOT/test-suit/starryos/probes/expected/guest-alpine323"
 CC="${CC:-riscv64-linux-musl-gcc}"
+export STARRY_LINUX_GUEST_CC="${STARRY_LINUX_GUEST_CC:-$CC}"
 
 test -f "$GUEST_SCRIPT" || { echo "missing $GUEST_SCRIPT" >&2; exit 1; }
 command -v "$CC" >/dev/null || { echo "missing $CC" >&2; exit 1; }
