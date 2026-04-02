@@ -116,15 +116,15 @@ cargo xtask starry test qemu --target riscv64 \
 从 **QEMU 串口保存的文本**（或任意包含探针输出的日志）里取 **首行** `^CASE `，与 `expected/<探针名>.line` 对比：
 
 ```sh
-# 日志在文件里
-test-suit/starryos/scripts/verify-guest-log-oracle.sh write_stdout my-serial.log
+# 方式 A：没有现成文件时——只写探针名，粘贴串口/终端里的整段输出，最后按 Ctrl+D 结束输入
+test-suit/starryos/scripts/verify-guest-log-oracle.sh write_stdout
 
-# 日志在管道里（例如重跑时把 xtask 输出存下来再验）
+# 方式 B：先保存日志再验（推荐，可重复执行）
 cargo xtask starry test qemu ... 2>&1 | tee serial.log
 test-suit/starryos/scripts/verify-guest-log-oracle.sh write_stdout serial.log
 
-# 从 stdin 读入（等价于第二个参数写 `-`）
-grep . serial.log | test-suit/starryos/scripts/verify-guest-log-oracle.sh write_stdout -
+# 方式 C：显式从 stdin（等价于省略第二个参数）
+cat serial.log | test-suit/starryos/scripts/verify-guest-log-oracle.sh write_stdout -
 ```
 
 退出码：**0** 一致，**1** 与 oracle 不一致，**2** 日志中找不到 `^CASE ` 行。
