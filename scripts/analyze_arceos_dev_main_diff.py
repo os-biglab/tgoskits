@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 import csv
 import json
 import os
@@ -17,6 +18,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REPOS_CSV = REPO_ROOT / "scripts" / "repo" / "repos.csv"
 USER_AGENT = "tgoskits-arceos-dev-main-diff/1.0"
+TOP_LEVEL_GROUP_DIRS = {
+    "api",
+    "apps",
+    "benches",
+    "components",
+    "crates",
+    "docs",
+    "examples",
+    "modules",
+    "platforms",
+    "scripts",
+    "src",
+    "tests",
+    "tools",
+}
 
 
 @dataclass(frozen=True)
@@ -35,6 +51,7 @@ class CompareResult:
     ahead_by: int | None
     behind_by: int | None
     diff_lines: int | None
+    major_changes: str
     status: str
     detail: str
 
@@ -97,8 +114,101 @@ def load_arceos_org_repos(csv_path: Path) -> list[RepoRecord]:
     return sorted(repos, key=lambda item: item.repo)
 
 
+def summarize_path(path: str) -> str:
+    normalized = path.strip()
+    if not normalized:
+        return "(root)"
+    parts = normalized.split("/")
+    if parts[0] in {"src", "tests", "examples", "benches", "docs"}:
+        return parts[0]
+    if len(parts) >= 2 and parts[0] in TOP_LEVEL_GROUP_DIRS:
+        return "/".join(parts[:2])
+    return parts[0]
+
+
+def collect_top_changed_paths(numstat_output: str, *, limit: int = 3) -> list[str]:
+    area_weights: dict[str, int] = defaultdict(int)
+    binary_files = 0
+    for line in numstat_output.splitlines():
+        parts = line.split("\t", 2)
+        if len(parts) < 3:
+            continue
+        added, deleted, path = parts
+        if added == "-" or deleted == "-":
+            binary_files += 1
+            continue
+        try:
+            weight = int(added) + int(deleted)
+        except ValueError:
+            continue
+        area_weights[summarize_path(path)] += weight
+
+    ranked = sorted(area_weights.items(), key=lambda item: (-item[1], item[0]))
+    top_areas = [f"{name}({weight} lines)" for name, weight in ranked[:limit]]
+    if binary_files:
+        top_areas.append(f"binary_files({binary_files})")
+    return top_areas
+
+
+def collect_commit_subjects(tmp_path: Path, revspec: str, *, limit: int = 2) -> list[str]:
+    proc = run(
+        ["git", "log", "--format=%s", "--no-merges", revspec],
+        cwd=tmp_path,
+    )
+    subjects: list[str] = []
+    seen: set[str] = set()
+    for line in proc.stdout.splitlines():
+        subject = " ".join(line.split())
+        if not subject or subject in seen:
+            continue
+        seen.add(subject)
+        subjects.append(subject)
+        if len(subjects) >= limit:
+            break
+    return subjects
+
+
+def shorten_subject(subject: str, *, max_len: int = 72) -> str:
+    if len(subject) <= max_len:
+        return subject
+    return subject[: max_len - 3].rstrip() + "..."
+
+
+def summarize_major_changes(
+    tmp_path: Path,
+    *,
+    ahead_by: int,
+    snapshot_numstat: str,
+) -> str:
+    pieces: list[str] = []
+
+    top_paths = collect_top_changed_paths(snapshot_numstat)
+    if top_paths:
+        pieces.append("dev_paths: " + ", ".join(top_paths))
+
+    merge_base_proc = run(
+        ["git", "merge-base", "refs/remotes/origin/main", "refs/remotes/origin/dev"],
+        cwd=tmp_path,
+        check=False,
+    )
+    merge_base = merge_base_proc.stdout.strip()
+
+    if ahead_by > 0:
+        dev_revspec = (
+            f"{merge_base}..refs/remotes/origin/dev"
+            if merge_base_proc.returncode == 0 and merge_base
+            else "refs/remotes/origin/dev"
+        )
+        dev_subjects = collect_commit_subjects(tmp_path, dev_revspec)
+        if dev_subjects:
+            pieces.append("dev_commits: " + " | ".join(shorten_subject(item) for item in dev_subjects))
+
+    return "; ".join(pieces)
+
+
 def compare_branches(owner: str, repo: str) -> CompareResult:
     repo_url = f"https://github.com/{owner}/{repo}.git"
+    major_changes = ""
     with tempfile.TemporaryDirectory(prefix=f"{repo}-") as tmpdir:
         tmp_path = Path(tmpdir)
         try:
@@ -138,54 +248,63 @@ def compare_branches(owner: str, repo: str) -> CompareResult:
         except subprocess.CalledProcessError as exc:
             detail = (exc.stderr or exc.stdout or "").strip()
             if "couldn't find remote ref" in detail or "fatal: couldn't find remote ref" in detail:
-                return CompareResult(owner, repo, None, None, None, "MISSING", detail)
-            return CompareResult(owner, repo, None, None, None, "ERROR", detail or f"git exit {exc.returncode}")
+                return CompareResult(owner, repo, None, None, None, "", "MISSING", detail)
+            return CompareResult(owner, repo, None, None, None, "", "ERROR", detail or f"git exit {exc.returncode}")
 
-    parts = proc.stdout.strip().split()
-    if len(parts) != 2:
-        return CompareResult(
-            owner,
-            repo,
-            None,
-            None,
-            None,
-            "ERROR",
-            f"unexpected rev-list output: {proc.stdout.strip()}",
-        )
-    try:
-        behind_by = int(parts[0])
-        ahead_by = int(parts[1])
-    except ValueError:
-        return CompareResult(
-            owner,
-            repo,
-            None,
-            None,
-            None,
-            "ERROR",
-            f"unexpected rev-list output: {proc.stdout.strip()}",
-        )
-
-    diff_lines = 0
-    for line in numstat_proc.stdout.splitlines():
-        parts = line.split("\t", 2)
-        if len(parts) < 2:
-            continue
-        added, deleted = parts[0], parts[1]
-        if added == "-" or deleted == "-":
-            continue
+        parts = proc.stdout.strip().split()
+        if len(parts) != 2:
+            return CompareResult(
+                owner,
+                repo,
+                None,
+                None,
+                None,
+                "",
+                "ERROR",
+                f"unexpected rev-list output: {proc.stdout.strip()}",
+            )
         try:
-            diff_lines += int(added) + int(deleted)
+            behind_by = int(parts[0])
+            ahead_by = int(parts[1])
         except ValueError:
             return CompareResult(
                 owner,
                 repo,
-                ahead_by,
-                behind_by,
                 None,
+                None,
+                None,
+                "",
                 "ERROR",
-                f"unexpected numstat output: {line}",
+                f"unexpected rev-list output: {proc.stdout.strip()}",
             )
+
+        diff_lines = 0
+        for line in numstat_proc.stdout.splitlines():
+            parts = line.split("\t", 2)
+            if len(parts) < 2:
+                continue
+            added, deleted = parts[0], parts[1]
+            if added == "-" or deleted == "-":
+                continue
+            try:
+                diff_lines += int(added) + int(deleted)
+            except ValueError:
+                return CompareResult(
+                    owner,
+                    repo,
+                    ahead_by,
+                    behind_by,
+                    None,
+                    "",
+                    "ERROR",
+                    f"unexpected numstat output: {line}",
+                )
+
+        major_changes = summarize_major_changes(
+            tmp_path,
+            ahead_by=ahead_by,
+            snapshot_numstat=numstat_proc.stdout,
+        )
 
     if ahead_by == 0 and behind_by == 0:
         status = "IDENTICAL"
@@ -195,12 +314,15 @@ def compare_branches(owner: str, repo: str) -> CompareResult:
         status = "BEHIND"
     else:
         status = "DIVERGED"
-    return CompareResult(owner, repo, ahead_by, behind_by, diff_lines, status, "")
+    return CompareResult(owner, repo, ahead_by, behind_by, diff_lines, major_changes, status, "")
 
 
 def print_table(results: list[CompareResult]) -> None:
-    print(f"{'repo':32} {'ahead(dev-main)':>15} {'behind(dev-main)':>16} {'diff_lines':>12} status")
-    print("-" * 94)
+    print(
+        f"{'repo':32} {'ahead(dev-main)':>15} {'behind(dev-main)':>16} "
+        f"{'diff_lines':>12} {'status':10} major_changes"
+    )
+    print("-" * 160)
     for item in results:
         ahead = "-" if item.ahead_by is None else str(item.ahead_by)
         behind = "-" if item.behind_by is None else str(item.behind_by)
@@ -208,7 +330,7 @@ def print_table(results: list[CompareResult]) -> None:
         status = item.status
         if item.detail:
             status = f"{status}: {item.detail}"
-        print(f"{item.repo:32} {ahead:>15} {behind:>16} {diff_lines:>12} {status}")
+        print(f"{item.repo:32} {ahead:>15} {behind:>16} {diff_lines:>12} {status:10} {item.major_changes}")
 
 
 def main() -> int:
@@ -247,6 +369,7 @@ def main() -> int:
                         "ahead_by": item.ahead_by,
                         "behind_by": item.behind_by,
                         "diff_lines": item.diff_lines,
+                        "major_changes": item.major_changes,
                         "status": item.status,
                         "detail": item.detail,
                     }
