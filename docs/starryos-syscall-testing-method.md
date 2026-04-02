@@ -19,7 +19,10 @@
 - **`diff-guest-line.sh`**：将串口/日志中的一行 `CASE …` 与 `expected/<probe>.line` 比对。
 - **`run-starry-probe-qemu.sh <probe>`**：依次执行注入镜像与 `cargo xtask starry test qemu`（见 `test-suit/starryos/probes/README.md`）。
 - **`extract-case-line.sh`**：从日志或管道中取首行 `CASE …`（便于与 `diff-guest-line.sh` 串联）。
-- **`scripts/starryos-probes-ci.sh`**：catalog 校验、覆盖检查、shell `sh -n`、可选交叉编译（无需 QEMU）。
+- **`scripts/starryos-probes-ci.sh`**：catalog 校验、覆盖检查、shell `sh -n`、可选交叉编译（无需 QEMU）；若仅有 **`riscv64-linux-gnu-gcc`**（如 Ubuntu）也会尝试构建。
+- **`test-suit/starryos/scripts/run-e2e-probe-smoke.sh`**：本地 **rootfs + 注入 + `cargo xtask starry test qemu`** 一键冒烟（默认不跑 CI）。
+
+**GitHub Actions**：`.github/workflows/starryos-probes.yml`（静态 job + `linux-oracle`）。
 
 **提交分组**：见 `docs/starryos-syscall-commit-strategy.md`。
 

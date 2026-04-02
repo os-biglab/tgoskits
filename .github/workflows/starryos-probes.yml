@@ -1,0 +1,63 @@
+# StarryOS syscall probes: catalog / coverage / shell syntax; optional Linux user-mode oracle.
+# Triggers on probe-related paths; use Actions → Run workflow for manual runs on any branch (e.g. next).
+
+name: StarryOS syscall probes
+
+on:
+  push:
+    paths:
+      - "scripts/extract_starry_syscalls.py"
+      - "scripts/gen_syscall_probes.py"
+      - "scripts/check_probe_coverage.py"
+      - "scripts/starryos-probes-ci.sh"
+      - "docs/starryos-syscall-catalog.yaml"
+      - "docs/starryos-syscall-dispatch.json"
+      - "test-suit/starryos/**"
+      - ".github/workflows/starryos-probes.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: Catalog, coverage, sh -n
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Python deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml
+
+      - name: Run starryos-probes-ci.sh
+        run: ./scripts/starryos-probes-ci.sh
+
+  linux-oracle:
+    name: Cross-build + qemu-riscv64 oracle
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml qemu-user gcc-riscv64-linux-gnu
+
+      - name: Sanity (same as static subset)
+        run: |
+          python3 scripts/extract_starry_syscalls.py --check-catalog docs/starryos-syscall-catalog.yaml
+          python3 scripts/check_probe_coverage.py
+
+      - name: Build static riscv64 probes (GNU toolchain)
+        env:
+          CC: riscv64-linux-gnu-gcc
+        run: test-suit/starryos/scripts/build-probes.sh
+
+      - name: verify-oracle-all (strict)
+        env:
+          VERIFY_STRICT: "1"
+          CC: riscv64-linux-gnu-gcc
+        run: test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all

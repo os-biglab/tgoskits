@@ -21,9 +21,13 @@ sh -n "$ROOT/scripts/starryos-probes-ci.sh"
 echo "== OK: starryos-probes-ci static checks passed =="
 
 if command -v riscv64-linux-musl-gcc >/dev/null 2>&1; then
-  echo "== cross build probes =="
+  echo "== cross build probes (musl) =="
   CC=riscv64-linux-musl-gcc "$ROOT/test-suit/starryos/scripts/build-probes.sh"
   echo "== OK: probe build passed =="
+elif command -v riscv64-linux-gnu-gcc >/dev/null 2>&1; then
+  echo "== cross build probes (gnu, e.g. Ubuntu CI) =="
+  CC=riscv64-linux-gnu-gcc "$ROOT/test-suit/starryos/scripts/build-probes.sh"
+  echo "== OK: probe build passed =="
 else
-  echo "SKIP: riscv64-linux-musl-gcc not found (cross build)"
+  echo "SKIP: no riscv64-linux-musl-gcc or riscv64-linux-gnu-gcc (cross build)"
 fi

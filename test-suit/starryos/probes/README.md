@@ -93,6 +93,24 @@ cargo xtask starry test qemu --target riscv64 \
 ./test-suit/starryos/scripts/run-starry-probe-qemu.sh read_stdin_zero
 ```
 
+## 本地端到端冒烟（步骤 5）
+
+从仓库根目录执行（会下载 rootfs、交叉编译探针、再跑 `cargo xtask starry test qemu`，**耗时较长**，默认 CI 不跑）：
+
+```sh
+./test-suit/starryos/scripts/run-e2e-probe-smoke.sh write_stdout
+# 或其它探针 basename，例如 read_stdin_zero
+```
+
+## GitHub Actions（步骤 3–4）
+
+工作流 **`.github/workflows/starryos-probes.yml`**：
+
+- **static**：`./scripts/starryos-probes-ci.sh`（catalog、覆盖、`sh -n`；若 runner 上无交叉编译器则跳过构建）。
+- **linux-oracle**：安装 `python3-yaml`、`qemu-user`、`gcc-riscv64-linux-gnu`，用 **GNU** 交叉链静态编译后执行 **`VERIFY_STRICT=1 verify-oracle-all`**。
+
+在 GitHub：**Actions → StarryOS syscall probes → Run workflow** 可在 `next` 等分支手动触发。
+
 ## 串口行与 oracle 比对
 
 从日志中提取含 `CASE` 的一行后：

@@ -1,40 +1,37 @@
-# StarryOS Probes — CI 示例（可选）
+# StarryOS Probes — CI 说明
 
-本仓库的 **`scripts/starryos-probes-ci.sh`** 可在任意 Linux runner 上运行（Python3 + PyYAML；可选 `riscv64-linux-musl-gcc`）。
+## 已接入的工作流
 
-若需在 CI 中强制执行 **Linux user-mode oracle**，可另开 job 安装 `qemu-user`（提供 `qemu-riscv64`），例如：
+仓库根目录 **`.github/workflows/starryos-probes.yml`** 已实现：
+
+1. **static**：安装 `python3-yaml` 后运行 **`./scripts/starryos-probes-ci.sh`**（catalog、覆盖、shell 语法；若 runner 上存在 `riscv64-linux-gnu-gcc` 或 `riscv64-linux-musl-gcc` 则顺带交叉编译）。
+2. **linux-oracle**：安装 `python3-yaml`、`qemu-user`、`gcc-riscv64-linux-gnu`，用 **GNU** 静态链接构建探针后执行 **`VERIFY_STRICT=1`** 的 **`verify-oracle-all`**。
+
+推送命中 `test-suit/starryos/**`、相关 `scripts/`、`docs/starryos-syscall-catalog.yaml` 等路径时会自动跑；也可在 **Actions → StarryOS syscall probes → Run workflow** 手动触发。
+
+## 与本地 musl 的差异
+
+本地开发推荐 **`riscv64-linux-musl-gcc`**；CI oracle job 使用 **`riscv64-linux-gnu-gcc`** 以便 `apt` 一键安装。当前 contract 以 **errno 数值与返回码** 为主，两套工具链在 Ubuntu 上应对齐；若出现 `expected/*.line` 不一致，再为 CI 单独维护期望文件或改为容器内 musl 构建。
+
+---
+
+以下为历史「粘贴示例」片段，可与现网 workflow 对照：
 
 ```yaml
-# .github/workflows/starryos-probes.yml（示例片段，按需粘贴调整）
 jobs:
   starryos-probes-static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-yaml
-      - name: Static checks + optional build
-        run: ./scripts/starryos-probes-ci.sh
+      - run: sudo apt-get update && sudo apt-get install -y python3-yaml
+      - run: ./scripts/starryos-probes-ci.sh
 
   starryos-probes-oracle:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-yaml qemu-user gcc-riscv64-linux-gnu
-          # 若使用 musl 交叉链，改为安装对应包或缓存 toolchain
-      - name: Build probes
-        run: |
-          export CC=riscv64-linux-musl-gcc
-          test-suit/starryos/scripts/build-probes.sh
-      - name: Oracle (strict)
-        env:
-          VERIFY_STRICT: "1"
+      - run: sudo apt-get update && sudo apt-get install -y python3-yaml qemu-user gcc-riscv64-linux-gnu
+      - run: CC=riscv64-linux-gnu-gcc test-suit/starryos/scripts/build-probes.sh
+      - env: { VERIFY_STRICT: "1" }
         run: test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all
 ```
-
-说明：第二条 job 的编译器需与本地约定一致（`riscv64-linux-musl-gcc` 或发行版提供的 `riscv64-linux-gnu-gcc`）；若工具链不同，应同步更新 `build-probes.sh` 的默认 `CC` 与 `expected/*.line` 的生成环境说明。
