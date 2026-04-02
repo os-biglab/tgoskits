@@ -18,7 +18,7 @@
 - **`run-diff-probes.sh`**：设置 **`VERIFY_STRICT=1`** 时，若缺少 `qemu-riscv64`，`verify-oracle` / `verify-oracle-all` 以退出码 **2** 失败（便于 CI 要求必须跑 oracle）。
 - **`diff-guest-line.sh`**：将串口/日志中的一行 `CASE …` 与 `expected/<probe>.line` 比对。
 - **`ensure-starry-base-rootfs.sh`**：若缺 **`target/.../rootfs-riscv64.img`** 则自动 **`cargo xtask starry rootfs --arch riscv64`**（`prepare-rootfs-with-probe.sh` 与 **`run-smp2-guest-matrix.sh`** 共用）。
-- **`run-smp2-guest-matrix.sh`**：全 contract 在 **`-smp 2`** 下跑 guest，并对 **`expected/*.line`** 做 **`verify-guest-log-oracle.sh`**（见 `docs/starryos-syscall-smp-notes.md`）。
+- **`run-smp2-guest-matrix.sh`**：全 contract 在 **`-smp 2`** 下跑 guest，并对 **`expected/*.line`**（或 **`.cases`**）做 **`verify-guest-log-oracle.sh`**（见 `docs/starryos-syscall-smp-notes.md`）。失败时写入 **`$LOGDIR/MATRIX_FAILURES.md`**，处理步骤见 **`docs/starryos-probes-matrix-failure-playbook.md`**。
 - **`run-starry-probe-qemu.sh <probe>`**：依次执行注入镜像与 `cargo xtask starry test qemu`（见 `test-suit/starryos/probes/README.md`）。
 - **`verify-guest-log-oracle.sh <probe> [log|-]`**：从串口/日志取首行 `^CASE `，与 `expected/<probe>.line` 自动比对（**0 / 1 / 2** 退出码）。**可不写第二个参数**，从标准输入读入（粘贴串口全文后 **Ctrl+D**）；或用完整 **`cargo xtask starry test qemu … 2>&1 | tee serial.log`** 留档后再验（完整命令见 **`test-suit/starryos/probes/README.md`**「方式 B」）。
 - **`extract-case-line.sh`** / **`diff-guest-line.sh`**：底层抽取与单行比对。

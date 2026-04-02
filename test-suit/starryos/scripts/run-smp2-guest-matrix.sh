@@ -33,16 +33,25 @@ for probe in $probes; do
   log="$LOGDIR/smp2-${probe}.log"
   if ! "$WS/test-suit/starryos/scripts/run-starry-probe-qemu-smp2.sh" "$probe" >"$log" 2>&1; then
     echo "FAILED: QEMU starry test ($probe) — see $log" >&2
+    "$WS/test-suit/starryos/scripts/append-matrix-failure-note.sh" "$LOGDIR" "$probe" qemu "$log"
     failed=1
     continue
   fi
   if ! "$WS/test-suit/starryos/scripts/verify-guest-log-oracle.sh" "$probe" "$log"; then
     echo "FAILED: guest CASE vs oracle ($probe) — see $log" >&2
+    "$WS/test-suit/starryos/scripts/append-matrix-failure-note.sh" "$LOGDIR" "$probe" oracle "$log"
     failed=1
   fi
 done
 
 if [ "$failed" -eq 0 ]; then
   echo "OK: all listed probes passed SMP2 + guest-oracle (logs under $LOGDIR)"
+  rm -f "$LOGDIR/MATRIX_FAILURES.md"
+else
+  echo "" >&2
+  echo "可行动项：见 docs/starryos-probes-matrix-failure-playbook.md" >&2
+  if [ -f "$LOGDIR/MATRIX_FAILURES.md" ]; then
+    echo "失败摘要已写入: $LOGDIR/MATRIX_FAILURES.md" >&2
+  fi
 fi
 exit "$failed"
