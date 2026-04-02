@@ -10,6 +10,21 @@ from pathlib import Path
 import yaml
 
 
+def resolve_expected(expected_dir: Path, probe: str) -> tuple[Path | None, Path | None]:
+    """Prefer expected/user/* then expected/* (root)."""
+    line_candidates = [
+        expected_dir / "user" / f"{probe}.line",
+        expected_dir / f"{probe}.line",
+    ]
+    line_file = next((p for p in line_candidates if p.is_file()), None)
+    cases_candidates = [
+        expected_dir / "user" / f"{probe}.cases",
+        expected_dir / f"{probe}.cases",
+    ]
+    cases_file = next((p for p in cases_candidates if p.is_file()), None)
+    return line_file, cases_file
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="partial|aligned: contract_probe requires contract/*.c and expected .line or .cases; "
@@ -48,14 +63,13 @@ def main() -> int:
                 )
             if probe:
                 c_file = contract_dir / f"{probe}.c"
-                line_file = expected_dir / f"{probe}.line"
-                cases_file = expected_dir / f"{probe}.cases"
+                line_file, cases_file = resolve_expected(expected_dir, probe)
                 if not c_file.is_file():
                     errors.append(f"{syscall}: missing contract {c_file.relative_to(root)}")
-                if not line_file.is_file() and not cases_file.is_file():
+                if line_file is None and cases_file is None:
                     errors.append(
-                        f"{syscall}: expected {line_file.relative_to(root)} or "
-                        f"{cases_file.relative_to(root)} for probe {probe}"
+                        f"{syscall}: expected expected/user/{probe}.line|.cases or "
+                        f"expected/{probe}.line|.cases for probe {probe}"
                     )
             continue
 
@@ -64,14 +78,13 @@ def main() -> int:
         if not probe:
             continue
         c_file = contract_dir / f"{probe}.c"
-        line_file = expected_dir / f"{probe}.line"
-        cases_file = expected_dir / f"{probe}.cases"
+        line_file, cases_file = resolve_expected(expected_dir, probe)
         if not c_file.is_file():
             errors.append(f"{syscall}: missing contract {c_file.relative_to(root)}")
-        if not line_file.is_file() and not cases_file.is_file():
+        if line_file is None and cases_file is None:
             errors.append(
-                f"{syscall}: expected {line_file.relative_to(root)} or "
-                f"{cases_file.relative_to(root)} for probe {probe}"
+                f"{syscall}: expected expected/user/{probe}.line|.cases or "
+                f"expected/{probe}.line|.cases for probe {probe}"
             )
 
     if errors:

@@ -28,6 +28,19 @@ test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all
 VERIFY_STRICT=1 test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all
 ```
 
+## Linux oracle（guest 真内核 · 轨 B）
+
+锚点 **Alpine 3.23.3 / Linux 6.18 LTS**，见 **`docs/starryos-linux-guest-oracle-pin.md`**。需要 **`qemu-system-riscv64`**、**`STARRY_LINUX_GUEST_IMAGE`**（riscv64 `Image`），以及仓库内 **`scripts/run_linux_guest_oracle.sh`**（将探针打成 initramfs `/init`）。
+
+```sh
+export STARRY_LINUX_GUEST_IMAGE=/path/to/Image
+test-suit/starryos/scripts/run-diff-probes.sh oracle-guest write_stdout
+VERIFY_ORACLE_TRACK=guest-alpine323 test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all
+./scripts/refresh_guest_oracle_expected.sh   # 重写 expected/guest-alpine323/*.line
+```
+
+物化批次 guest 轨：`python3 scripts/materialize_syscall_batch.py --batch … --oracle-track guest-alpine323 --guest-kernel "$STARRY_LINUX_GUEST_IMAGE"`。
+
 ## Contract probes (hand-written)
 
 | Basename | Syscall | `expected/*.line` |

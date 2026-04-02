@@ -7,9 +7,13 @@ PKG="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 probe="${1:?usage: $0 <probe_basename> <log_file>}"
 logf="${2:?usage: $0 <probe_basename> <log_file>}"
-exp="$PKG/probes/expected/${probe}.cases"
+if [ -f "$PKG/probes/expected/user/${probe}.cases" ]; then
+  exp="$PKG/probes/expected/user/${probe}.cases"
+else
+  exp="$PKG/probes/expected/${probe}.cases"
+fi
 test -f "$exp" || {
-  echo "Missing $exp" >&2
+  echo "Missing $exp (or expected/user/${probe}.cases)" >&2
   exit 1
 }
 test -f "$logf" || {

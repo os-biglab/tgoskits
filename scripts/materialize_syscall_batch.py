@@ -5,12 +5,15 @@ Usage:
   python3 scripts/materialize_syscall_batch.py --batch B02-file-ops
   python3 scripts/materialize_syscall_batch.py --batch B03-fd-ops --cc /path/to/riscv64-linux-musl-gcc
 
-Requires: PyYAML, qemu-riscv64, riscv64-linux-musl-gcc (override with --cc).
+Requires: PyYAML, riscv64-linux-musl-gcc (override with --cc).
+  User oracle: qemu-riscv64 (default). Guest oracle (--oracle-track guest-alpine323):
+  qemu-system-riscv64 + STARRY_LINUX_GUEST_IMAGE; see docs/starryos-linux-guest-oracle-pin.md.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -510,6 +513,38 @@ def run_oracle(cc: str, qemu: str, c_src: str) -> str:
     raise RuntimeError("no CASE line in qemu output")
 
 
+def run_oracle_guest(cc: str, repo_root: Path, c_src: str, guest_kernel: str) -> str:
+    """Run probe under qemu-system-riscv64 + initramfs (/init); return first CASE line."""
+    script = repo_root / "scripts" / "run_linux_guest_oracle.sh"
+    if not script.is_file():
+        raise RuntimeError(f"missing guest oracle script: {script}")
+    qemu_sys = shutil.which(os.environ.get("QEMU_SYSTEM_RISCV64") or "qemu-system-riscv64")
+    if not qemu_sys:
+        raise RuntimeError("qemu-system-riscv64 not found (install qemu-system-misc or set QEMU_SYSTEM_RISCV64)")
+    inner_timeout = int(os.environ.get("STARRY_LINUX_GUEST_TIMEOUT", "90"))
+    with tempfile.TemporaryDirectory() as td:
+        tdp = Path(td)
+        src = tdp / "p.c"
+        elf = tdp / "p"
+        src.write_text(c_src, encoding="utf-8")
+        subprocess.run([cc, "-static", "-O2", str(src), "-o", str(elf)], check=True, capture_output=True)
+        env = os.environ.copy()
+        env["STARRY_LINUX_GUEST_IMAGE"] = guest_kernel
+        proc = subprocess.run(
+            ["bash", str(script), str(elf)],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=inner_timeout + 60,
+        )
+        blob = (proc.stdout or "") + (proc.stderr or "")
+        for line in blob.splitlines():
+            line = line.strip().replace("\r", "")
+            if line.startswith("CASE "):
+                return line
+    raise RuntimeError("no CASE line in guest qemu output")
+
+
 def make_catalog_entry(syscall: str, probe: str, section: str) -> dict:
     rel = f"test-suit/starryos/probes/contract/{probe}.c"
     return {
@@ -537,21 +572,43 @@ def main() -> int:
     ap.add_argument("--batch", required=True, help="e.g. B02-file-ops")
     ap.add_argument("--root", type=Path, default=Path("."))
     ap.add_argument("--cc", default=None)
-    ap.add_argument("--qemu", default="qemu-riscv64")
+    ap.add_argument("--qemu", default="qemu-riscv64", help="User-mode qemu binary (oracle-track=user only)")
+    ap.add_argument(
+        "--oracle-track",
+        choices=("user", "guest-alpine323"),
+        default="user",
+        help="user: qemu-riscv64 + expected/*.line; guest: qemu-system + expected/guest-alpine323/",
+    )
+    ap.add_argument(
+        "--guest-kernel",
+        default=None,
+        help="riscv64 Linux Image path (guest track); default STARRY_LINUX_GUEST_IMAGE env",
+    )
     args = ap.parse_args()
     root: Path = args.root.resolve()
     cc = args.cc or shutil.which("riscv64-linux-musl-gcc") or "riscv64-linux-musl-gcc"
     if not shutil.which(cc.split("/")[-1]) and not Path(cc).is_file():
         print(f"Missing cross compiler: {cc}", file=sys.stderr)
         return 1
-    if not shutil.which(args.qemu):
-        print(f"Missing {args.qemu}", file=sys.stderr)
-        return 1
+    guest_kernel = (args.guest_kernel or os.environ.get("STARRY_LINUX_GUEST_IMAGE") or "").strip()
+    if args.oracle_track == "user":
+        if not shutil.which(args.qemu):
+            print(f"Missing {args.qemu}", file=sys.stderr)
+            return 1
+    else:
+        if not guest_kernel:
+            print("Guest oracle: set --guest-kernel or STARRY_LINUX_GUEST_IMAGE", file=sys.stderr)
+            return 1
 
     matrix_path = root / "docs" / "starryos-syscall-compat-matrix.yaml"
     catalog_path = root / "docs" / "starryos-syscall-catalog.yaml"
     contract_dir = root / "test-suit" / "starryos" / "probes" / "contract"
     expected_dir = root / "test-suit" / "starryos" / "probes" / "expected"
+    if args.oracle_track == "guest-alpine323":
+        expected_out = expected_dir / "guest-alpine323"
+    else:
+        expected_out = expected_dir
+    expected_out.mkdir(parents=True, exist_ok=True)
 
     header, entries = matrix_header_and_entries(matrix_path)
     cat_text = catalog_path.read_text(encoding="utf-8")
@@ -580,16 +637,22 @@ def main() -> int:
             print(f"skip {syscall}: no emitter for pattern={pattern!r}", file=sys.stderr)
             continue
 
-        line = run_oracle(cc, args.qemu, src)
+        if args.oracle_track == "user":
+            line = run_oracle(cc, args.qemu, src)
+        else:
+            line = run_oracle_guest(cc, root, src, guest_kernel)
         (contract_dir / f"{probe}.c").write_text(src, encoding="utf-8")
-        (expected_dir / f"{probe}.line").write_text(line + "\n", encoding="utf-8")
+        (expected_out / f"{probe}.line").write_text(line + "\n", encoding="utf-8")
 
         section = extract_section(notes)
         e.clear()
         e["syscall"] = syscall
         e["contract_probe"] = probe
         e["parity"] = "partial"
-        e["notes"] = [f"{batch_id} contract probe"]
+        notes_out = [f"{batch_id} contract probe"]
+        if args.oracle_track == "guest-alpine323":
+            notes_out.append("oracle_track=guest-alpine323 (Alpine 3.23.3 / Linux 6.18 LTS anchor)")
+        e["notes"] = notes_out
 
         if syscall not in existing_syscalls:
             cat_data.setdefault("syscalls", []).append(make_catalog_entry(syscall, probe, section))

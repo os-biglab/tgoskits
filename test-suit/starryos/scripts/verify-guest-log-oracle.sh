@@ -14,8 +14,16 @@ PKG="$(cd "$SCRIPT_DIR/.." && pwd)"
 probe="${1:?usage: $0 <probe_basename> [log_file|-]}"
 shift
 
-cases="$PKG/probes/expected/${probe}.cases"
-linef="$PKG/probes/expected/${probe}.line"
+if [ -f "$PKG/probes/expected/user/${probe}.cases" ]; then
+  cases="$PKG/probes/expected/user/${probe}.cases"
+else
+  cases="$PKG/probes/expected/${probe}.cases"
+fi
+if [ -f "$PKG/probes/expected/user/${probe}.line" ]; then
+  linef="$PKG/probes/expected/user/${probe}.line"
+else
+  linef="$PKG/probes/expected/${probe}.line"
+fi
 
 if [ -f "$cases" ] && [ -f "$linef" ]; then
   echo "verify-guest-log-oracle: both .cases and .line exist for probe=$probe" >&2

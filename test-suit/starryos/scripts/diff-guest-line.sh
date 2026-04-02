@@ -8,8 +8,12 @@
 set -eu
 PKG="$(cd "$(dirname "$0")/.." && pwd)"
 probe="${1:?usage: $0 <probe_basename> [line]}"
-exp="$PKG/probes/expected/${probe}.line"
-test -f "$exp" || { echo "Missing $exp" >&2; exit 1; }
+if [ -f "$PKG/probes/expected/user/${probe}.line" ]; then
+  exp="$PKG/probes/expected/user/${probe}.line"
+else
+  exp="$PKG/probes/expected/${probe}.line"
+fi
+test -f "$exp" || { echo "Missing $exp (or expected/user/${probe}.line)" >&2; exit 1; }
 
 if [ "$#" -ge 2 ]; then
   got="$(printf '%s' "$2" | tr -d '\r')"

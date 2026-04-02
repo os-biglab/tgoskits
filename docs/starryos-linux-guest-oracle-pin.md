@@ -19,11 +19,21 @@
 
 ## 环境变量（建议）
 
-运行 `scripts/run_linux_guest_oracle.sh`（若已接入）或等价包装时：
+运行 **`scripts/run_linux_guest_oracle.sh`**（仓库已提供）时：
 
-- **`STARRY_LINUX_GUEST_IMAGE`**：guest 用的 **riscv64 Linux 内核镜像**路径（如 `Image` 或 `vmlinuz`）。  
-- **`STARRY_LINUX_GUEST_INITRD`**（可选）：initramfs；若用「单探针即 `/init`」的 cpio 方案，可由脚本每次生成。  
-- **`QEMU_SYSTEM_RISCV64`**：默认 `qemu-system-riscv64`。
+- **`STARRY_LINUX_GUEST_IMAGE`**（必需）：riscv64 **Linux 内核镜像**路径（`Image` / `vmlinuz` 等）。  
+- **`QEMU_SYSTEM_RISCV64`**：默认 `qemu-system-riscv64`。  
+- **`STARRY_LINUX_GUEST_TIMEOUT`**：秒，默认 `90`。  
+- **`STARRY_LINUX_GUEST_APPEND`**：追加到内核 cmdline（可选）。
+
+脚本将探针 ELF **打包为 initramfs 中的 `/init`**，用 `qemu-system-riscv64 -machine virt -kernel … -initrd …` 启动；**不再使用**单独的 `STARRY_LINUX_GUEST_INITRD` 输入文件（每次由探针生成 cpio）。
+
+### 相关命令
+
+- 单探针串口输出：`STARRY_LINUX_GUEST_IMAGE=… test-suit/starryos/scripts/run-diff-probes.sh oracle-guest <basename>`  
+- 与 `guest-alpine323` 期望比对：`VERIFY_ORACLE_TRACK=guest-alpine323 STARRY_LINUX_GUEST_IMAGE=… …/run-diff-probes.sh verify-oracle-all`（无内核且 `VERIFY_STRICT=0` 时跳过 guest 校验）。  
+- 批量重写 golden：`STARRY_LINUX_GUEST_IMAGE=… ./scripts/refresh_guest_oracle_expected.sh`  
+- 物化批次（guest 轨）：`python3 scripts/materialize_syscall_batch.py --batch … --oracle-track guest-alpine323 --guest-kernel /path/to/Image`
 
 ## expected 分轨命名
 
