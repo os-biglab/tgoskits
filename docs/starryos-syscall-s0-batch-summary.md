@@ -10,9 +10,11 @@
 |------|------|------|
 | 分发表提取 | `scripts/extract_starry_syscalls.py` | 解析 `handle_syscall` 的 `match`，输出 JSON |
 | 机器可读分发表 | `docs/starryos-syscall-dispatch.json` | 当前约 210 条 syscall 条目（含分区注释与 cfg） |
-| Catalog 种子 | `docs/starryos-syscall-catalog.yaml` | 12 个高优先级 syscall 元数据（含 `dup` / `fcntl` / `read` / `close` 等） |
+| Catalog 种子 | `docs/starryos-syscall-catalog.yaml` | 14 个高优先级 syscall 元数据（含 `ioctl` / `lseek` / `openat` / `dup` / `fcntl` 等） |
 | 探针生成器 | `scripts/gen_syscall_probes.py` | 从 catalog 生成 `*_generated.c` |
-| 手写 contract | `test-suit/starryos/probes/contract/*.c` | 含 `openat_badfd` / `openat_enoent`、`read`/`write` 零长度、`close`/`dup`/`fcntl` 非法 fd 等 |
+| 手写 contract | `test-suit/starryos/probes/contract/*.c` | 含 `openat`/`ioctl`/`lseek` errno 类及 `read`/`write` 零长度等 |
+| 日常用法 | `docs/starryos-probes-daily.md` | 本地检查、oracle、QEMU、日志比对、SMP |
+| SMP QEMU | `test-suit/starryos/qemu-riscv64-smp2.toml`、`run-starry-probe-qemu-smp2.sh` | `-smp 2`；`cargo xtask starry test qemu --qemu-config …` |
 | 期望 oracle 行 | `test-suit/starryos/probes/expected/*.line` | `verify-oracle` / `verify-oracle-all` |
 | 构建/差分脚本 | `build-probes.sh`、`run-diff-probes.sh`、`list-contract-probes.sh`、`diff-guest-line.sh`、`run-starry-probe-qemu.sh` | 批量 oracle / guest 比对 / QEMU 封装 |
 | 覆盖检查 | `scripts/check_probe_coverage.py` | catalog `tests:` 路径存在性 |

@@ -25,6 +25,8 @@
 
 **GitHub Actions**：`.github/workflows/starryos-probes.yml`（静态 job + `linux-oracle`）。
 
+**日常命令速查**：`docs/starryos-probes-daily.md`。
+
 **提交分组**：见 `docs/starryos-syscall-commit-strategy.md`。
 
 **SMP**：见 `docs/starryos-syscall-smp-notes.md`（占位，对应路线图 S0-6）。

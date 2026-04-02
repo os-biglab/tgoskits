@@ -1,13 +1,18 @@
-# StarryOS Syscall 与 SMP（S0-6 占位说明）
+# StarryOS Syscall 与 SMP（S0-6）
 
-当前探针与 `starry test qemu` 用例默认按 **单核启动路径** 验证；catalog 中部分条目已标注 `smp2`，尚未接成自动化矩阵。
+## 已落地：`-smp 2` QEMU 模板
 
-## 后续可落地项
+- **`test-suit/starryos/qemu-riscv64-smp2.toml`**：在默认 `qemu-riscv64.toml` 基础上增加 **`-smp` `2`**。
+- **`cargo xtask starry test qemu --qemu-config test-suit/starryos/qemu-riscv64-smp2.toml`**：使用该模板生成临时测试配置（仍配合 **`--test-disk-image`** 等参数）。
+- 便捷脚本：**`test-suit/starryos/scripts/run-starry-probe-qemu-smp2.sh <probe>`**（等价于单核版 **`run-starry-probe-qemu.sh`** + SMP TOML）。
 
-- 在 `cargo xtask starry test qemu` 可传入的 QEMU 配置或模板中增加 **`-smp 2`**（或与现有 `test-suit` TOML 对齐的等价项），为 `futex` / `ppoll` 等条目提供第二档回归。
-- 对 **非确定性** 行为（竞态、唤醒顺序）避免固定 `expected/*.line`；改为超时内子串匹配或结构化日志统计。
-- 将 SMP 档位与 **`docs/starryos-syscall-compat-matrix.yaml`** 的 `parity` / `notes` 联动，便于审计「单核已测 / 多核未测」。
+日常命令摘要见 **`docs/starryos-probes-daily.md`**。
 
-## 与现有探针的关系
+## 建议用法
 
-`read` / `write` / `close` 的零长度或 `EBADF` 类 contract 在 SMP 下通常与单核语义一致，可作为 SMP 冒烟的 **稳定子集**；同步原语类需单独设计用例。
+- 对 **errno / 零长度 IO** 等确定性探针，在单核通过后可再跑一遍 SMP 冒烟，确认无回归。
+- **`futex` / `ppoll`** 等多核语义或竞态相关项：勿单独依赖固定 `expected/*.line`；需单独设计用例与匹配策略。
+
+## 与矩阵的关系
+
+可在 **`docs/starryos-syscall-compat-matrix.yaml`** 的 `notes` 中标注「单核 + SMP2 冒烟已跑」；同步原语类待专用矩阵后再填 `parity`。

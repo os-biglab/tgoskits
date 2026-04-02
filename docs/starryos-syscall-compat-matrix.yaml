@@ -39,6 +39,18 @@ entries:
     notes:
       - "F_GETFD on 非法 fd -> EBADF"
 
+  - syscall: ioctl
+    contract_probe: ioctl_badfd
+    parity: partial
+    notes:
+      - "非法 fd + FIONREAD -> EBADF"
+
+  - syscall: lseek
+    contract_probe: lseek_badfd
+    parity: partial
+    notes:
+      - "非法 fd + SEEK_SET -> EBADF"
+
   - syscall: openat
     contract_probe: openat_badfd
     parity: partial

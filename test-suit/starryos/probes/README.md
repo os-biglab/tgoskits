@@ -2,6 +2,8 @@
 
 Small static `riscv64-linux-musl` ELF programs for Linux-oracle vs StarryOS diff testing.
 
+**日常用法（本地）**：见 **`docs/starryos-probes-daily.md`**（`starryos-probes-ci.sh`、`verify-oracle-all`、QEMU、`verify-guest-log-oracle`、SMP）。
+
 ## Build (host)
 
 Requires `riscv64-linux-musl-gcc` on PATH (or set `CC`):
@@ -37,6 +39,8 @@ VERIFY_STRICT=1 test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all
 | `fcntl_badfd` | fcntl(2) 非法 fd + F_GETFD → EBADF | `expected/fcntl_badfd.line` |
 | `openat_badfd` | openat(2) 非法 dirfd + 相对路径 → EBADF | `expected/openat_badfd.line` |
 | `openat_enoent` | openat(2) 不存在绝对路径 → ENOENT | `expected/openat_enoent.line` |
+| `lseek_badfd` | lseek(2) 非法 fd → EBADF | `expected/lseek_badfd.line` |
+| `ioctl_badfd` | ioctl(2) 非法 fd + FIONREAD → EBADF | `expected/ioctl_badfd.line` |
 
 列出当前 contract 名称：`test-suit/starryos/scripts/list-contract-probes.sh`
 
@@ -110,6 +114,14 @@ cargo xtask starry test qemu --target riscv64 \
 ```sh
 ./test-suit/starryos/scripts/run-starry-probe-qemu.sh read_stdin_zero
 ```
+
+### SMP（`-smp 2`）
+
+```sh
+./test-suit/starryos/scripts/run-starry-probe-qemu-smp2.sh write_stdout
+```
+
+底层使用 **`test-suit/starryos/qemu-riscv64-smp2.toml`** 与 **`cargo xtask starry test qemu --qemu-config …`**。
 
 ## 本地端到端冒烟（步骤 5）
 

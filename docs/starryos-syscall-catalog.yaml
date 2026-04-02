@@ -112,6 +112,46 @@ syscalls:
     generator_hints:
       template: contract_errno
 
+  - syscall: ioctl
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/ctl.rs
+    status: partial
+    semantic_class: fd_control
+    boundary_profiles:
+      - bad_fd
+    core_modes:
+      - smp1
+      - smp2
+    linux_refs:
+      - man 2 ioctl
+    tests:
+      - test-suit/starryos/probes/contract/ioctl_badfd.c
+    risk_tags:
+      - errno_mismatch
+    generator_hints:
+      template: contract_errno
+
+  - syscall: lseek
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/io.rs
+    status: partial
+    semantic_class: local_io
+    boundary_profiles:
+      - bad_fd
+    core_modes:
+      - smp1
+      - smp2
+    linux_refs:
+      - man 2 lseek
+    tests:
+      - test-suit/starryos/probes/contract/lseek_badfd.c
+    risk_tags:
+      - errno_mismatch
+    generator_hints:
+      template: contract_errno
+
   - syscall: clock_gettime
     domain: time
     dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs

@@ -1,0 +1,3 @@
+chmod +x /root/ioctl_badfd
+/root/ioctl_badfd
+echo 'All tests passed!'

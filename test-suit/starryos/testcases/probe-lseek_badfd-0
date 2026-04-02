@@ -1,0 +1,3 @@
+chmod +x /root/lseek_badfd
+/root/lseek_badfd
+echo 'All tests passed!'

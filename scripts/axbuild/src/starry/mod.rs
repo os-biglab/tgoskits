@@ -94,6 +94,9 @@ pub struct ArgsTestQemu {
     /// Ext4 rootfs used as the source for the ephemeral test disk copy (default: downloaded `rootfs-<arch>.img`).
     #[arg(long, value_name = "PATH")]
     pub test_disk_image: Option<PathBuf>,
+    /// Override QEMU test TOML (default: `test-suit/starryos/qemu-<arch>.toml`). Relative paths are under the workspace root.
+    #[arg(long, value_name = "PATH")]
+    pub qemu_config: Option<PathBuf>,
     #[arg(
         long,
         value_name = "SECONDS",
@@ -219,10 +222,21 @@ impl Starry {
             SnapshotPersistence::Discard,
         )?;
         request.package = package.to_string();
+        let qemu_template = args
+            .qemu_config
+            .as_ref()
+            .map(|p| {
+                if p.is_absolute() {
+                    p.clone()
+                } else {
+                    self.app.workspace_root().join(p)
+                }
+            })
+            .unwrap_or_else(|| self.test_qemu_config_path(arch));
         let qemu_config = rootfs::prepare_test_qemu_config(
             self.app.workspace_root(),
             &request,
-            &self.test_qemu_config_path(arch),
+            &qemu_template,
             args.timeout,
             args.test_disk_image.as_deref(),
         )
@@ -471,6 +485,40 @@ mod tests {
                         Some(PathBuf::from(
                             "target/riscv64gc-unknown-none-elf/rootfs-riscv64-probe.img"
                         ))
+                    );
+                }
+                _ => panic!("expected qemu test command"),
+            },
+            _ => panic!("expected test command"),
+        }
+    }
+
+    #[test]
+    fn command_parses_test_qemu_with_qemu_config() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(subcommand)]
+            command: Command,
+        }
+
+        let cli = Cli::try_parse_from([
+            "starry",
+            "test",
+            "qemu",
+            "--target",
+            "riscv64",
+            "--qemu-config",
+            "test-suit/starryos/qemu-riscv64-smp2.toml",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Test(args) => match args.command {
+                TestCommand::Qemu(args) => {
+                    assert_eq!(args.target, "riscv64");
+                    assert_eq!(
+                        args.qemu_config,
+                        Some(PathBuf::from("test-suit/starryos/qemu-riscv64-smp2.toml"))
                     );
                 }
                 _ => panic!("expected qemu test command"),
