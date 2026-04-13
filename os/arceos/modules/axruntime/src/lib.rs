@@ -259,6 +259,9 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
         ax_input::init_input(all_devices.input);
     }
 
+    #[cfg(feature = "ipi")]
+    ax_ipi::init();
+
     #[cfg(feature = "smp")]
     self::mp::start_secondary_cpus(cpu_id);
 

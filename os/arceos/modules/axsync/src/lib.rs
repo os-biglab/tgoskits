@@ -25,4 +25,6 @@ pub use ax_kspin::{SpinNoIrq as Mutex, SpinNoIrqGuard as MutexGuard};
 
 #[cfg(feature = "multitask")]
 #[cfg_attr(doc, doc(cfg(feature = "multitask")))]
-pub use self::mutex::{Mutex, MutexGuard, RawMutex};
+pub use self::mutex::{
+    HandoffStats, Mutex, MutexGuard, RawMutex, handoff_stats, reset_handoff_stats,
+};

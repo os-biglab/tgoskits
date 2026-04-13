@@ -255,10 +255,13 @@ impl<G: BaseGuard> AxRunQueueRef<'_, G> {
             let cpu_id = self.inner.cpu_id;
             debug!("task unblock: {task_id_name} on run_queue {cpu_id}");
             // Note: when the task is unblocked on another CPU's run queue,
-            // we just ignore the `resched` flag.
+            // an optional IPI can be used to prompt the remote CPU to reschedule.
             if resched && cpu_id == this_cpu_id() {
                 #[cfg(feature = "preempt")]
                 crate::current().set_preempt_pending(true);
+            } else if resched {
+                #[cfg(feature = "ipi")]
+                ax_ipi::run_on_cpu(cpu_id, crate::api::trigger_remote_resched);
             }
         }
     }

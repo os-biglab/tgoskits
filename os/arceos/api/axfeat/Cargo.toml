@@ -22,7 +22,7 @@ hv = ["ax-hal/hv"]
 
 # Interrupts
 irq = ["ax-hal/irq", "ax-runtime/irq", "ax-task?/irq", "ax-driver?/irq"]
-ipi = ["irq", "dep:ax-ipi", "ax-hal/ipi", "ax-runtime/ipi"]
+ipi = ["irq", "dep:ax-ipi", "ax-hal/ipi", "ax-runtime/ipi", "ax-task?/ipi"]
 
 # Custom or default platforms
 myplat = ["ax-hal/myplat"]

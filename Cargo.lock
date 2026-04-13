@@ -236,6 +236,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "arceos-concurrency-stress"
+version = "0.3.0"
+dependencies = [
+ "ax-std",
+ "ax-sync",
+]
+
+[[package]]
 name = "arceos-display"
 version = "0.3.0"
 dependencies = [
@@ -1408,6 +1416,7 @@ dependencies = [
  "ax-task",
  "fastrand",
  "lock_api",
+ "log",
 ]
 
 [[package]]
@@ -1419,6 +1428,7 @@ dependencies = [
  "ax-crate-interface",
  "ax-errno",
  "ax-hal",
+ "ax-ipi",
  "ax-kernel-guard",
  "ax-kspin",
  "ax-lazyinit",

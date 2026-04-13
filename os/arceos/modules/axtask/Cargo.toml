@@ -26,6 +26,7 @@ multitask = [
 ]
 task-ext = ["dep:extern-trait"]
 irq = ["ax-hal/irq", "dep:ax-timer-list"]
+ipi = ["irq", "dep:ax-ipi", "ax-hal/ipi"]
 tls = ["ax-hal/tls"]
 preempt = ["irq", "ax-percpu?/preempt", "ax-kernel-guard/preempt"]
 smp = ["ax-kspin/smp"]
@@ -40,6 +41,7 @@ test = ["ax-percpu?/sp-naive"]
 ax-config = { workspace = true, optional = true }
 ax-errno.workspace = true
 ax-hal.workspace = true
+ax-ipi = { workspace = true, optional = true }
 axpoll = { workspace = true, optional = true }
 ax-sched = { version = "0.5.1", optional = true }
 cfg-if.workspace = true

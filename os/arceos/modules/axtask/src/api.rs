@@ -232,6 +232,15 @@ pub(crate) fn yield_now_unchecked() {
     current_run_queue::<NoPreemptIrqSave>().yield_current()
 }
 
+#[cfg(feature = "ipi")]
+pub(crate) fn trigger_remote_resched() {
+    let curr = current();
+    #[cfg(feature = "preempt")]
+    if !curr.is_idle() {
+        curr.set_preempt_pending(true);
+    }
+}
+
 /// Current task is going to sleep for the given duration.
 ///
 /// If the feature `irq` is not enabled, it uses busy-wait instead.
