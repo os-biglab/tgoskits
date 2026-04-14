@@ -74,7 +74,8 @@ def ensure_riscv_musl_cc() -> None:
     print(f"[setup] extracting {archive}")
     with tarfile.open(archive, "r:gz") as tf:
         try:
-            tf.extractall(toolchains_dir, filter="data")
+            # Use a passthrough filter function on Python 3.12+; older Pythons will raise TypeError
+            tf.extractall(toolchains_dir, filter=lambda ti: ti)
         except TypeError:  # pragma: no cover - Python < 3.12 fallback
             tf.extractall(toolchains_dir)
     archive.unlink(missing_ok=True)
