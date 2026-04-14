@@ -1,0 +1,61 @@
+# Repository-level AI framework config.
+# You only need to edit this file to control model selection, Copilot invocation,
+# and retry behavior of each stage.
+
+model = "gpt-5-mini"
+copilot_cmd = "copilot"
+copilot_args = [
+  "--allow-all-tools",
+  "--allow-all-paths",
+  "--allow-all-urls",
+  "--no-ask-user",
+  "--silent",
+]
+
+[stage_models]
+intake = "gpt-5-mini"
+plan = "gpt-5-mini"
+implement = "gpt-5-mini"
+review = "gpt-5-mini"
+test = "gpt-5-mini"
+docs = "gpt-5-mini"
+
+[default_stage_policy]
+invoke_copilot = true
+autopilot = false
+max_attempts = 1
+retry_on_failure = false
+command_timeout_sec = 0
+max_autopilot_continues = 0
+
+[stage_policies.implement]
+invoke_copilot = true
+autopilot = true
+max_attempts = 4
+retry_on_failure = true
+command_timeout_sec = 0
+max_autopilot_continues = 10
+
+[stage_policies.test]
+invoke_copilot = true
+autopilot = true
+max_attempts = 4
+retry_on_failure = true
+command_timeout_sec = 0
+max_autopilot_continues = 10
+
+[stage_policies.test-debugger]
+invoke_copilot = true
+autopilot = true
+max_attempts = 4
+retry_on_failure = true
+command_timeout_sec = 0
+max_autopilot_continues = 10
+
+[stage_policies.retry-smoke]
+invoke_copilot = false
+autopilot = false
+max_attempts = 2
+retry_on_failure = true
+command_timeout_sec = 0
+max_autopilot_continues = 0

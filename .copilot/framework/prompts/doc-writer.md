@@ -9,4 +9,4 @@ Include:
 - how to verify it
 - known constraints
 - where the artifacts are stored
-
+- final pipeline result (passed/failed/blocked) with evidence file paths

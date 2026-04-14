@@ -8,6 +8,6 @@ Responsibilities:
 - Decide which roles must run and in what order
 - Enforce allowed paths, approvals, and failure gates
 - Keep the run auditable with clear artifacts and logs
+- For retry-enabled stages, keep failure context concise so the next attempt can act immediately
 
 Prefer the smallest safe change set and keep `cargo xtask` as the primary execution surface.
-

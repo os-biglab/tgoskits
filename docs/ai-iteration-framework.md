@@ -36,10 +36,12 @@ python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/linu
 运行后会在 `.copilot/runs/<task-id>/<timestamp>/` 下生成：
 
 - 原始 manifest
+- `framework.config.toml` 的副本（如果存在）
 - 标准化 manifest
 - 每个 stage 的 prompt bundle
 - stage 状态文件
 - stage 日志（如果执行了命令）
+- 每次重试的 attempt prompt / copilot log / command log
 
 ## 4. Manifest 结构
 
@@ -64,6 +66,57 @@ command = ["cargo", "xtask", "test"]
 ```
 
 `agent` 取值对应 `.copilot/framework/prompts/*.md` 中的模板文件名。
+
+## 4.1 Model 与 Copilot 调用配置
+
+如果你想让每个阶段使用不同的 model，并自动调用 Copilot CLI，只需要修改 `.copilot/framework/config.toml`。
+
+示例：
+
+```toml
+model = "gpt-5-mini"
+copilot_cmd = "copilot"
+copilot_args = ["--allow-all-tools", "--allow-all-paths", "--allow-all-urls", "--no-ask-user", "--silent"]
+
+[stage_models]
+intake = "gpt-5-mini"
+plan = "gpt-5-mini"
+implement = "gpt-5-mini"
+review = "gpt-5-mini"
+test = "gpt-5-mini"
+docs = "gpt-5-mini"
+
+[default_stage_policy]
+invoke_copilot = true
+autopilot = false
+max_attempts = 1
+retry_on_failure = false
+
+[stage_policies.implement]
+invoke_copilot = true
+autopilot = true
+max_attempts = 4
+retry_on_failure = true
+
+[stage_policies.test]
+invoke_copilot = true
+autopilot = true
+max_attempts = 4
+retry_on_failure = true
+```
+
+规则：
+
+- `model` 是默认值
+- `stage_models.<stage-name>` 优先级最高
+- 如果没有 stage-name 命中，会继续尝试 `stage_models.<agent-name>`
+- 如果都没有匹配，就回退到 `model`
+- `stage_policies.<stage-name>` 优先级最高；其次是 `stage_policies.<agent-name>`；最后回退到 `default_stage_policy`
+- `invoke_copilot=true` 时会自动调用 Copilot CLI
+- `autopilot=true` 时会为该 stage 打开 autopilot 模式
+- `max_attempts + retry_on_failure` 控制失败后的自动循环重试
+
+runner 会把最终解析出的 model、policy、attempt 结果写进 `manifest.normalized.json` 和每个 stage 的状态文件，方便后续自动化调用层直接读取。
 
 ## 5. Prompt、skills、hooks
 
@@ -126,4 +179,3 @@ hook 模板放在：
 - platform-specialist
 
 这样可以先保证框架跑得动，再逐步增强自动化能力。
-
