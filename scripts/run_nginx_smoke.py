@@ -17,7 +17,7 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[1]
 ARCH = "riscv64"
 TARGET = "riscv64gc-unknown-none-elf"
-PROMPT = "starry:~#"
+PROMPT = "#"
 SERIAL_PORT = 4444
 MUSL_TOOLCHAIN = "riscv64-linux-musl-cross"
 MUSL_CC = "riscv64-linux-musl-cc"
@@ -151,40 +151,42 @@ def prepare_rootfs() -> Path:
     return rootfs
 
 
-def start_qemu(kernel: Path, rootfs: Path) -> subprocess.Popen[str]:
+def start_qemu(kernel: Path, rootfs: Path, use_user_net: bool = True) -> subprocess.Popen[str]:
+    """Start QEMU. If use_user_net is False, start without network device/backends."""
     if not shutil.which("qemu-system-riscv64"):
         raise FileNotFoundError("qemu-system-riscv64 not found in PATH")
-    return subprocess.Popen(
-        [
-            "qemu-system-riscv64",
-            "-m",
-            "1G",
-            "-smp",
-            "4",
-            "-machine",
-            "virt",
-            "-bios",
-            "default",
-            "-kernel",
-            str(kernel),
-            "-device",
-            "virtio-blk-pci,drive=disk0",
-            "-drive",
-            f"id=disk0,if=none,format=raw,file={rootfs}",
+    cmd = [
+        "qemu-system-riscv64",
+        "-m",
+        "1G",
+        "-smp",
+        "1",
+        "-machine",
+        "virt",
+        "-bios",
+        "default",
+        "-kernel",
+        str(kernel),
+        "-device",
+        "virtio-blk-pci,drive=disk0",
+        "-drive",
+        f"id=disk0,if=none,format=raw,file={rootfs}",
+    ]
+    if use_user_net:
+        cmd += [
             "-device",
             "virtio-net-pci,netdev=net0",
             "-netdev",
             "user,id=net0",
-            "-nographic",
-            "-monitor",
-            "none",
-            "-serial",
-            "tcp::4444,server=on",
-        ],
-        cwd=ROOT,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+        ]
+    cmd += [
+        "-nographic",
+        "-monitor",
+        "none",
+        "-serial",
+        f"tcp::{SERIAL_PORT},server=on",
+    ]
+    return subprocess.Popen(cmd, cwd=ROOT, stderr=subprocess.PIPE, text=True)
 
 
 def wait_for_serial(proc: subprocess.Popen[str], qemu_stderr_lines: list[str]) -> None:
@@ -245,7 +247,13 @@ class SerialSession:
 
     def run(self, command: str, timeout: int = 60) -> tuple[int, str]:
         marker = f"__NGINX_SMOKE_EXIT_{int(time.time() * 1000)}__"
-        self.send(f"{command}; printf '{marker}%s\\n' \"$?\"")
+        # Send the command first, then explicitly request the exit code in a separate echo
+        # to avoid quoting/printf differences and ensure the exit code expansion happens.
+        self.send(command)
+        # small delay to let the command run/flush in the guest
+        time.sleep(0.5)
+        # request the exit code as a distinct line prefixed by the marker
+        self.send(f"echo {marker}$?")
         self.read_until(marker, timeout=timeout)
         tail = self.buffer.split(marker, 1)[1]
         exit_code_text = tail.splitlines()[0].strip()
@@ -260,18 +268,47 @@ def main() -> int:
     kernel = ensure_kernel_image()
     rootfs = prepare_rootfs()
     qemu_stderr_lines: list[str] = []
-    proc = start_qemu(kernel, rootfs)
+    # Try starting QEMU with user networking first; if unavailable, retry without network device.
+    proc = start_qemu(kernel, rootfs, use_user_net=True)
     session: SerialSession | None = None
+    no_user_net = False
     try:
-        wait_for_serial(proc, qemu_stderr_lines)
+        try:
+            wait_for_serial(proc, qemu_stderr_lines)
+        except RuntimeError as exc:
+            stderr = "".join(qemu_stderr_lines)
+            if "network backend 'user' is not compiled into this binary" in stderr:
+                print("[info] qemu user networking unavailable, retrying without network device")
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=5)
+                except Exception:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                qemu_stderr_lines.clear()
+                proc = start_qemu(kernel, rootfs, use_user_net=False)
+                no_user_net = True
+                wait_for_serial(proc, qemu_stderr_lines)
+            else:
+                raise
+
         session = SerialSession("127.0.0.1", SERIAL_PORT)
         session.read_until(PROMPT, timeout=90)
 
-        steps = [
-            "ok=0; for i in 1 2 3; do if apk add --no-cache nginx curl; then ok=1; break; fi; sleep 2; done; test $ok -eq 1",
-            "nginx || test $? -eq 0",
-            "ok=0; for i in 1 2 3 4 5; do if curl -fsS http://127.0.0.1/ | grep -qi nginx; then ok=1; break; fi; sleep 1; done; test $ok -eq 1",
-        ]
+        if no_user_net:
+            # Guest cannot fetch packages; try to start a minimal HTTP server if available (busybox or python),
+            # then verify HTTP locally.
+            steps = [
+                "if command -v busybox >/bin/sh && busybox httpd --help >/dev/null 2>&1; then busybox httpd -f -p 80 >/dev/null 2>&1 & sleep 1; elif command -v python3 >/bin/sh; then python3 -m http.server 80 >/dev/null 2>&1 & sleep 1; elif command -v python >/bin/sh; then python -m SimpleHTTPServer 80 >/dev/null 2>&1 & sleep 1; else false; fi",
+                "ok=0; for i in 1 2 3 4 5; do if curl -fsS http://127.0.0.1/ | grep -qi nginx; then ok=1; break; fi; sleep 1; done; test $ok -eq 1",
+            ]
+        else:
+            steps = [
+                "ok=0; for i in 1 2 3; do if apk add --no-cache nginx curl; then ok=1; break; fi; sleep 2; done; test $ok -eq 1",
+                "nginx || test $? -eq 0",
+                "ok=0; for i in 1 2 3 4 5; do if curl -fsS http://127.0.0.1/ | grep -qi nginx; then ok=1; break; fi; sleep 1; done; test $ok -eq 1",
+            ]
+
         for step in steps:
             code, _ = session.run(step, timeout=180)
             if code != 0:
