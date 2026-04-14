@@ -47,6 +47,7 @@ __pycache__/
 *.img
 !.claude/skills/*
 /tmp/*
+/.copilot/runs/
 
 .arceos*
 .starry*

@@ -1,0 +1,129 @@
+# AI 驱动的内核改进持续迭代框架
+
+TGOSKits 适合做成一个持续运行的 AI 迭代工作台：输入一个内核/OS/应用支持目标，自动拆成计划、实现、评审、测试、调试和文档六个阶段，再把执行动作落到现有的 `cargo xtask`、`scripts/check.sh` 和 `scripts/test.sh` 上。
+
+## 1. 目标
+
+- 支持内核改进、系统集成和 Linux 应用适配
+- 把 AI 产出变成可审计、可复跑、可回滚的运行记录
+- 让“规划 → 编写代码 → review → 测试 → debug → 文档”成为固定闭环
+
+## 2. 最小可用集
+
+建议先落地 6 个角色：
+
+| 角色 | 职责 |
+| --- | --- |
+| `orchestrator` | 统一入口、拆分阶段、控制门禁 |
+| `planner` | 产出实施计划和验证路线 |
+| `implementer` | 生成最小补丁 |
+| `reviewer` | 检查正确性和回归风险 |
+| `test-debugger` | 读取测试日志并指导修复 |
+| `doc-writer` | 生成或更新文档 |
+
+这套最小集已经足够把一个需求跑成完整 pipeline。
+
+## 3. 运行方式
+
+仓库里提供了一个轻量 runner：
+
+```bash
+python3 scripts/ai_framework.py validate --manifest .copilot/framework/manifests/linux-app-example.toml
+python3 scripts/ai_framework.py plan --manifest .copilot/framework/manifests/linux-app-example.toml
+python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/linux-app-example.toml
+```
+
+运行后会在 `.copilot/runs/<task-id>/<timestamp>/` 下生成：
+
+- 原始 manifest
+- 标准化 manifest
+- 每个 stage 的 prompt bundle
+- stage 状态文件
+- stage 日志（如果执行了命令）
+
+## 4. Manifest 结构
+
+`scripts/ai_framework.py` 读取 TOML manifest。最小结构如下：
+
+```toml
+[task]
+id = "linux-app-example"
+title = "Support a Linux application"
+target = "StarryOS"
+allowed_paths = ["components/", "os/StarryOS/", "os/arceos/", "docs/"]
+output_dir = ".copilot/runs"
+
+[[stages]]
+name = "plan"
+agent = "planner"
+
+[[stages]]
+name = "test"
+agent = "test-debugger"
+command = ["cargo", "xtask", "test"]
+```
+
+`agent` 取值对应 `.copilot/framework/prompts/*.md` 中的模板文件名。
+
+## 5. Prompt、skills、hooks
+
+### Prompts
+
+prompt 模板统一放在：
+
+- `.copilot/framework/prompts/orchestrator.md`
+- `.copilot/framework/prompts/planner.md`
+- `.copilot/framework/prompts/implementer.md`
+- `.copilot/framework/prompts/reviewer.md`
+- `.copilot/framework/prompts/test-debugger.md`
+- `.copilot/framework/prompts/doc-writer.md`
+
+### Skill / Agent
+
+Copilot skill 放在：
+
+- `.claude/skills/ai-iteration-framework/SKILL.md`
+- `.claude/skills/ai-iteration-framework/agents/openai.yaml`
+
+它把整个框架入口收束成一个可调用技能。
+
+### Hooks
+
+hook 模板放在：
+
+- `.copilot/framework/hooks/pre-task.sh`
+- `.copilot/framework/hooks/post-patch.sh`
+- `.copilot/framework/hooks/post-test-fail.sh`
+- `.copilot/framework/hooks/pre-merge.sh`
+- `.copilot/framework/hooks/post-merge.sh`
+
+这些脚本是最小模板，适合接到外部自动化或本地工作流中。
+
+## 6. Linux 应用支持 pipeline
+
+如果目标是支持某个 Linux 应用，推荐流程是：
+
+1. `orchestrator` 读应用目标、架构和约束
+2. `planner` 拆出 syscall、VFS、进程、网络、设备和配置缺口
+3. `implementer` 先补基础能力，再补应用特化
+4. `reviewer` 检查是否引入无必要的特化路径
+5. `test-debugger` 先跑最小启动，再跑功能验证，再跑回归
+6. `doc-writer` 记录启动方式、已知限制、验证命令
+
+## 7. 典型落点
+
+- ArceOS：`components/`、`os/arceos/modules/`、`os/arceos/api/`、`os/arceos/ulib/`
+- StarryOS：`components/starry-*`、`os/StarryOS/kernel/`
+- Axvisor：`components/axvm`、`components/axvcpu`、`os/axvisor/`
+- 统一验证：`cargo xtask test`、`cargo xtask clippy`、对应系统的 `qemu` / `test qemu`
+
+## 8. 当前建议
+
+先把最小集跑通，再扩展专门 agent：
+
+- kernel-specialist
+- linux-app-adapter
+- platform-specialist
+
+这样可以先保证框架跑得动，再逐步增强自动化能力。
+

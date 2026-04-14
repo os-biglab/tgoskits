@@ -1,0 +1,5 @@
+interface:
+  display_name: "AI Iteration Framework"
+  short_description: "Orchestrate AI-driven kernel iteration"
+  default_prompt: "Use $ai-iteration-framework to run the manifest-driven kernel iteration pipeline with prompt bundles, staged execution, testing, debugging, and documentation."
+

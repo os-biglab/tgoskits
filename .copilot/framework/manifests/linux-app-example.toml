@@ -1,0 +1,44 @@
+[task]
+id = "linux-app-example"
+title = "Support a Linux application"
+target = "StarryOS"
+description = "Example manifest for the AI-driven kernel iteration pipeline."
+allowed_paths = [
+  "components/",
+  "os/StarryOS/",
+  "os/arceos/",
+  "docs/",
+]
+output_dir = ".copilot/runs"
+
+[[stages]]
+name = "intake"
+agent = "orchestrator"
+description = "Classify scope and prepare the run."
+
+[[stages]]
+name = "plan"
+agent = "planner"
+description = "Produce the staged implementation and validation plan."
+
+[[stages]]
+name = "implement"
+agent = "implementer"
+description = "Apply the smallest correct patch."
+
+[[stages]]
+name = "review"
+agent = "reviewer"
+description = "Inspect the patch for correctness and regressions."
+
+[[stages]]
+name = "test"
+agent = "test-debugger"
+description = "Run the selected validation commands."
+command = ["cargo", "xtask", "test"]
+
+[[stages]]
+name = "docs"
+agent = "doc-writer"
+description = "Update the user-facing documentation."
+
