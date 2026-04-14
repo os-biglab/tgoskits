@@ -52,7 +52,18 @@ python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/linu
 id = "linux-app-example"
 title = "Support a Linux application"
 target = "StarryOS"
+description = "Make nginx boot and serve HTTP on StarryOS."
 allowed_paths = ["components/", "os/StarryOS/", "os/arceos/", "docs/"]
+reference_docs = [
+  "README.md",
+  "docs/demo.md",
+  "docs/starryos-guide.md",
+  "docs/components.md",
+]
+acceptance_criteria = [
+  "nginx can boot under StarryOS",
+  "nginx serves HTTP and returns a valid response",
+]
 output_dir = ".copilot/runs"
 
 [[stages]]
@@ -62,10 +73,49 @@ agent = "planner"
 [[stages]]
 name = "test"
 agent = "test-debugger"
-command = ["cargo", "xtask", "test"]
+command = ["bash", "-lc", "cargo xtask starry rootfs --arch riscv64 && ${NGINX_SMOKE_CMD:?set NGINX_SMOKE_CMD}"]
 ```
 
 `agent` 取值对应 `.copilot/framework/prompts/*.md` 中的模板文件名。
+
+`reference_docs` 会被直接展开进每个 stage 的 prompt，建议至少包含：
+
+- `README.md`：先看快速导航，知道该用哪个系统入口
+- `docs/demo.md`：知道新增功能、修改已有功能时应遵守的贡献方式
+- `docs/components.md`：知道改动应落在哪一层组件
+- `docs/starryos-guide.md`：知道 StarryOS 的 rootfs、qemu 和验证入口
+
+对于 nginx 这类 Linux 应用，`test` 阶段最好不要只做“启动系统”，而是让命令直接执行一个烟测脚本，例如：
+
+```bash
+python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/nginx.toml
+```
+
+当前仓库已经提供了 `scripts/run_nginx_smoke.py`，它会自动：
+
+- 检查并自动下载 `riscv64-linux-musl-cross` 工具链（缺失时）
+- 自动构建 StarryOS kernel（缺失时）
+- 下载 StarryOS rootfs
+- 启动 StarryOS QEMU
+- 在 guest 里安装 `nginx` 和 `curl`
+- 启动 `nginx`
+- 在 guest 里用 `curl` 访问 `http://127.0.0.1/` 并校验返回结果
+
+你可以直接运行：
+
+```bash
+python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/nginx.toml
+```
+
+首次运行时间会更长，因为会自动完成工具链、kernel 和 rootfs 的准备。
+
+> 备注：`run_nginx_smoke.py` 依赖 QEMU 的 `-netdev user`（slirp）能力来让 guest 内 `apk add nginx` 可联网。如果本机 QEMU 未启用 user networking，脚本会直接报错并提示更换/安装带 slirp 的 QEMU。
+
+这样 `test-debugger` 会同时看到：
+
+- StarryOS/rootfs 的启动动作
+- nginx 的启动和 HTTP 验证动作
+- 失败日志和重试上下文
 
 ## 4.1 Model 与 Copilot 调用配置
 
@@ -76,7 +126,9 @@ command = ["cargo", "xtask", "test"]
 ```toml
 model = "gpt-5-mini"
 copilot_cmd = "copilot"
-copilot_args = ["--allow-all-tools", "--allow-all-paths", "--allow-all-urls", "--no-ask-user", "--silent"]
+copilot_output_format = "json"
+resume_sessions = true
+copilot_args = ["--allow-all-tools", "--allow-all-paths", "--allow-all-urls", "--no-ask-user"]
 
 [stage_models]
 intake = "gpt-5-mini"
@@ -115,8 +167,10 @@ retry_on_failure = true
 - `invoke_copilot=true` 时会自动调用 Copilot CLI
 - `autopilot=true` 时会为该 stage 打开 autopilot 模式
 - `max_attempts + retry_on_failure` 控制失败后的自动循环重试
+- `resume_sessions=true` 时，每次 Copilot 调用都会自动复用该 stage 上一次 session
+- `copilot_output_format="json"` 时，runner 可以稳定解析 sessionId 并写入 stage 状态
 
-runner 会把最终解析出的 model、policy、attempt 结果写进 `manifest.normalized.json` 和每个 stage 的状态文件，方便后续自动化调用层直接读取。
+runner 会把最终解析出的 model、policy、sessionId、attempt 结果写进 `manifest.normalized.json` 和每个 stage 的状态文件，方便后续自动化调用层直接读取。
 
 ## 5. Prompt、skills、hooks
 

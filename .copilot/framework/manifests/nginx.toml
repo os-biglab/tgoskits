@@ -1,0 +1,56 @@
+[task]
+id = "nginx-starry"
+title = "Run nginx on StarryOS"
+target = "StarryOS"
+description = "Support nginx as a Linux application and verify it boots and serves HTTP."
+allowed_paths = [
+  "components/",
+  "os/StarryOS/",
+  "os/arceos/",
+  "docs/",
+]
+reference_docs = [
+  "README.md",
+  "docs/demo.md",
+  "docs/starryos-guide.md",
+  "docs/components.md",
+  "docs/ai-iteration-framework.md",
+]
+acceptance_criteria = [
+  "nginx can start under StarryOS without crashing",
+  "nginx serves HTTP successfully and returns a valid response",
+  "the smoke test exits with status 0",
+  "the run directory contains prompt, Copilot log, and status artifacts",
+]
+output_dir = ".copilot/runs"
+
+[[stages]]
+name = "intake"
+agent = "orchestrator"
+description = "Classify nginx requirements and scope the work."
+
+[[stages]]
+name = "plan"
+agent = "planner"
+description = "Produce the implementation plan, validation path, and rollback strategy."
+
+[[stages]]
+name = "implement"
+agent = "implementer"
+description = "Make the smallest correct changes for nginx support."
+
+[[stages]]
+name = "review"
+agent = "reviewer"
+description = "Review the patch for correctness and regression risk."
+
+[[stages]]
+name = "test"
+agent = "test-debugger"
+description = "Prepare rootfs, boot StarryOS, start nginx, and verify HTTP with curl or an equivalent smoke check."
+command = ["python3", "scripts/run_nginx_smoke.py"]
+
+[[stages]]
+name = "docs"
+agent = "doc-writer"
+description = "Document the nginx run procedure and known limitations."

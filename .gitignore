@@ -48,6 +48,7 @@ __pycache__/
 !.claude/skills/*
 /tmp/*
 /.copilot/runs/
+/.cache/nginx-smoke/
 
 .arceos*
 .starry*

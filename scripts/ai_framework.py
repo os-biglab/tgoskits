@@ -60,6 +60,8 @@ class Task:
     target: str = ""
     description: str = ""
     allowed_paths: list[str] = field(default_factory=list)
+    reference_docs: list[str] = field(default_factory=list)
+    acceptance_criteria: list[str] = field(default_factory=list)
     output_dir: str = ".copilot/runs"
     stages: list[Stage] = field(default_factory=list)
 
@@ -69,13 +71,14 @@ class FrameworkConfig:
     default_model: str = "gpt-5-mini"
     stage_models: dict[str, str] = field(default_factory=dict)
     copilot_cmd: str = "copilot"
+    copilot_output_format: str = "json"
+    resume_sessions: bool = True
     copilot_args: list[str] = field(
         default_factory=lambda: [
             "--allow-all-tools",
             "--allow-all-paths",
             "--allow-all-urls",
             "--no-ask-user",
-            "--silent",
         ]
     )
     default_policy: StagePolicy = field(default_factory=StagePolicy)
@@ -107,6 +110,8 @@ def load_manifest(path: Path) -> Task:
     target = task_data.get("target", "")
     description = task_data.get("description", "")
     allowed_paths = _require_str_list(task_data.get("allowed_paths", []), "allowed_paths")
+    reference_docs = _require_str_list(task_data.get("reference_docs", []), "reference_docs")
+    acceptance_criteria = _require_str_list(task_data.get("acceptance_criteria", []), "acceptance_criteria")
     output_dir = task_data.get("output_dir", ".copilot/runs")
     stages_data = data.get("stages", [])
     if not isinstance(stages_data, list) or not stages_data:
@@ -119,6 +124,8 @@ def load_manifest(path: Path) -> Task:
         target=target,
         description=description,
         allowed_paths=allowed_paths,
+        reference_docs=reference_docs,
+        acceptance_criteria=acceptance_criteria,
         output_dir=output_dir,
         stages=stages,
     )
@@ -191,6 +198,10 @@ def load_framework_config(root: Path) -> FrameworkConfig:
         config.default_model = _as_str(data["default_model"], "default_model")
     if "copilot_cmd" in data:
         config.copilot_cmd = _as_str(data["copilot_cmd"], "copilot_cmd")
+    if "copilot_output_format" in data:
+        config.copilot_output_format = _as_str(data["copilot_output_format"], "copilot_output_format")
+    if "resume_sessions" in data:
+        config.resume_sessions = _as_bool(data["resume_sessions"], "resume_sessions")
     if "copilot_args" in data:
         config.copilot_args = _as_str_list(data["copilot_args"], "copilot_args")
 
@@ -298,6 +309,16 @@ def read_prompt_template(root: Path, agent: str) -> str:
     return f"# {agent}\n\nNo template found for this role.\n"
 
 
+def read_reference_doc(root: Path, doc_path: str, max_chars: int = 3500) -> str:
+    path = (root / doc_path).resolve()
+    if not path.exists() or not path.is_file():
+        return f"{doc_path}\n\n[missing file]"
+    content = path.read_text(encoding="utf-8", errors="replace")
+    if len(content) <= max_chars:
+        return content.rstrip()
+    return content[:max_chars].rstrip() + "\n\n[truncated]"
+
+
 def render_prompt(
     root: Path,
     task: Task,
@@ -314,6 +335,7 @@ def render_prompt(
         f"# Run: {task.task_id}",
         f"- Title: {task.title}",
         f"- Target: {task.target or '(unspecified)'}",
+        f"- Goal: {task.description or '(none)'}",
         f"- Stage: {stage.name}",
         f"- Agent: {stage.agent}",
         f"- Model: {stage.model or '(unset)'}",
@@ -330,6 +352,28 @@ def render_prompt(
         "## Allowed paths",
         allowed_paths,
         "",
+        "## Acceptance criteria",
+        "\n".join(f"- {item}" for item in task.acceptance_criteria) or "- (none)",
+        "",
+        "## Reference docs",
+        "\n".join(f"- {item}" for item in task.reference_docs) or "- (none)",
+        "",
+        "## Reference doc excerpts",
+    ]
+    if task.reference_docs:
+        for doc in task.reference_docs:
+            excerpt = read_reference_doc(root, doc)
+            lines.extend(
+                [
+                    f"### {doc}",
+                    excerpt,
+                    "",
+                ]
+            )
+    else:
+        lines.append("(none)")
+    lines.extend([
+        "",
         "## Stage notes",
         stage.description or "(none)",
         "",
@@ -340,7 +384,7 @@ def render_prompt(
         template,
         "",
         f"Run directory: {run_dir}",
-    ]
+    ])
     return "\n".join(lines)
 
 
@@ -373,8 +417,12 @@ def run_command_with_log(
         return 124, out
 
 
-def build_copilot_base_command(config: FrameworkConfig, stage: Stage) -> list[str]:
+def build_copilot_base_command(config: FrameworkConfig, stage: Stage, resume_session_id: str | None = None) -> list[str]:
     cmd = [config.copilot_cmd, *config.copilot_args]
+    if config.copilot_output_format:
+        cmd.extend(["--output-format", config.copilot_output_format])
+    if config.resume_sessions and resume_session_id:
+        cmd.extend(["--resume", resume_session_id])
     if stage.model:
         cmd.extend(["--model", stage.model])
     if stage.policy.autopilot:
@@ -391,9 +439,10 @@ def run_copilot_prompt(
     cwd: Path,
     log_path: Path,
     timeout_sec: int,
-) -> tuple[int, str, list[str]]:
+    resume_session_id: str | None = None,
+) -> tuple[int, str, list[str], str | None]:
     timeout = timeout_sec if timeout_sec > 0 else None
-    base_cmd = build_copilot_base_command(config, stage)
+    base_cmd = build_copilot_base_command(config, stage, resume_session_id=resume_session_id)
     prompt_cmd = [*base_cmd, "-p", prompt]
 
     try:
@@ -403,11 +452,11 @@ def run_copilot_prompt(
         first_output = (exc.stdout or "") + (exc.stderr or "")
         first_output += f"\n[timeout] copilot prompt exceeded {timeout_sec} seconds\n"
         log_path.write_text(first_output, encoding="utf-8")
-        return 124, first_output, prompt_cmd
+        return 124, first_output, prompt_cmd, extract_copilot_session_id(first_output)
 
     if first.returncode == 0:
         log_path.write_text(first_output, encoding="utf-8")
-        return 0, first_output, prompt_cmd
+        return 0, first_output, prompt_cmd, extract_copilot_session_id(first_output)
 
     try:
         second = subprocess.run(base_cmd, cwd=cwd, input=prompt, capture_output=True, text=True, timeout=timeout)
@@ -422,7 +471,7 @@ def run_copilot_prompt(
             + second_output
         )
         log_path.write_text(merged, encoding="utf-8")
-        return 124, merged, base_cmd
+        return 124, merged, base_cmd, extract_copilot_session_id(merged)
 
     merged = (
         "[prompt-mode failed]\n"
@@ -432,8 +481,55 @@ def run_copilot_prompt(
     )
     log_path.write_text(merged, encoding="utf-8")
     if second.returncode == 0:
-        return 0, merged, base_cmd
-    return second.returncode, merged, base_cmd
+        return 0, merged, base_cmd, extract_copilot_session_id(merged)
+    return second.returncode, merged, base_cmd, extract_copilot_session_id(merged)
+
+
+def extract_copilot_session_id(output: str) -> str | None:
+    for line in output.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        session_id = find_session_id(payload)
+        if session_id:
+            return session_id
+
+    patterns = (
+        r'"sessionId"\s*:\s*"([^"]+)"',
+        r'"session_id"\s*:\s*"([^"]+)"',
+        r"\bsessionId[:=]\s*([A-Za-z0-9._:-]+)",
+        r"\bsession_id[:=]\s*([A-Za-z0-9._:-]+)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, output)
+        if match:
+            return match.group(1)
+    return None
+
+
+def find_session_id(value: Any) -> str | None:
+    if isinstance(value, dict):
+        for key in ("sessionId", "session_id", "sessionID", "session"):
+            item = value.get(key)
+            if isinstance(item, str) and item.strip():
+                return item.strip()
+        for key, item in value.items():
+            if "session" in str(key).lower() and isinstance(item, str) and item.strip():
+                return item.strip()
+        for item in value.values():
+            found = find_session_id(item)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = find_session_id(item)
+            if found:
+                return found
+    return None
 
 
 def init_stage_status(index: int, stage: Stage) -> dict[str, Any]:
@@ -446,6 +542,7 @@ def init_stage_status(index: int, stage: Stage) -> dict[str, Any]:
         "policy": asdict(stage.policy),
         "command": stage.command,
         "working_dir": stage.working_dir,
+        "copilot_session_id": None,
         "attempts": [],
     }
 
@@ -463,6 +560,8 @@ def plan_run(root: Path, task: Task, manifest_path: Path, config: FrameworkConfi
             "default_model": config.default_model,
             "stage_models": config.stage_models,
             "copilot_cmd": config.copilot_cmd,
+            "copilot_output_format": config.copilot_output_format,
+            "resume_sessions": config.resume_sessions,
             "copilot_args": config.copilot_args,
             "default_stage_policy": asdict(config.default_policy),
             "stage_policies": {name: asdict(policy) for name, policy in config.stage_policies.items()},
@@ -473,6 +572,8 @@ def plan_run(root: Path, task: Task, manifest_path: Path, config: FrameworkConfi
             "target": task.target,
             "description": task.description,
             "allowed_paths": task.allowed_paths,
+            "reference_docs": task.reference_docs,
+            "acceptance_criteria": task.acceptance_criteria,
             "output_dir": task.output_dir,
         },
         "stages": [
@@ -521,11 +622,13 @@ def run_stage(root: Path, run_dir: Path, task: Task, config: FrameworkConfig, in
         return False, status
 
     previous_failure = ""
+    resume_session_id = None
     attempts: list[dict[str, Any]] = []
     for attempt in range(1, stage.policy.max_attempts + 1):
         attempt_record: dict[str, Any] = {
             "attempt": attempt,
             "prompt_file": "",
+            "resume_from_session_id": resume_session_id,
         }
 
         prompt = render_prompt(
@@ -543,19 +646,25 @@ def run_stage(root: Path, run_dir: Path, task: Task, config: FrameworkConfig, in
 
         if stage.policy.invoke_copilot:
             copilot_log_path = run_dir / "stages" / f"{index:02d}-{stage_name}.attempt-{attempt:02d}.copilot.log"
-            copilot_rc, _, copilot_cmd = run_copilot_prompt(
+            copilot_rc, _, copilot_cmd, session_id = run_copilot_prompt(
                 config=config,
                 stage=stage,
                 prompt=prompt,
                 cwd=workdir,
                 log_path=copilot_log_path,
                 timeout_sec=stage.policy.command_timeout_sec,
+                resume_session_id=resume_session_id,
             )
             attempt_record["copilot"] = {
                 "returncode": copilot_rc,
                 "command": copilot_cmd,
                 "log_file": str(copilot_log_path),
+                "session_id": session_id,
+                "resume_from_session_id": resume_session_id,
             }
+            if session_id:
+                resume_session_id = session_id
+                status["copilot_session_id"] = session_id
             if copilot_rc != 0:
                 previous_failure = f"copilot failed with return code {copilot_rc}; see {copilot_log_path.name}"
                 attempts.append(attempt_record)
@@ -695,4 +804,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-
