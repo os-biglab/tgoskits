@@ -246,22 +246,35 @@ class SerialSession:
         self.sock.sendall(command.encode("utf-8") + b"\r\n")
 
     def run(self, command: str, timeout: int = 60) -> tuple[int, str]:
+        """
+        Run `command` in the guest shell and capture its exit code robustly.
+
+        To avoid issues where a separate `echo $?` may not expand reliably over the
+        serial connection, run the user's command inside `sh -lc '...; printf "<marker>%d\\n" "$?"'`
+        so that the command and the exit-code printing happen in the same shell invocation.
+        """
         marker = f"__NGINX_SMOKE_EXIT_{int(time.time() * 1000)}__"
-        # Send the command first, then explicitly request the exit code in a separate echo
-        # to avoid quoting/printf differences and ensure the exit code expansion happens.
-        self.send(command)
-        # small delay to let the command run/flush in the guest
-        time.sleep(0.5)
-        # request the exit code as a distinct line prefixed by the marker
-        self.send(f"echo {marker}$?")
+        # Escape single quotes to safely embed into sh -c '...'
+        safe_command = command.replace("'", "'\"'\"'")
+        wrapped = f"sh -lc '{safe_command}; printf \"{marker}%d\\n\" \"$?\"'"
+        # send the wrapped command and wait for the marker
+        self.send(wrapped)
         self.read_until(marker, timeout=timeout)
         tail = self.buffer.split(marker, 1)[1]
-        exit_code_text = tail.splitlines()[0].strip()
-        try:
-            exit_code = int(exit_code_text)
-        except ValueError as exc:
-            raise RuntimeError(f"could not parse guest exit code from {exit_code_text!r}") from exc
-        return exit_code, self.buffer
+        # first non-empty line after marker should be the numeric exit code
+        for ln in tail.splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            # try to parse an integer from the line
+            try:
+                exit_code = int(ln)
+                return exit_code, self.buffer
+            except ValueError:
+                # skip non-numeric lines until a numeric one appears
+                continue
+        # no numeric exit code found
+        raise RuntimeError(f"could not parse guest exit code from {tail!r}")
 
 
 def main() -> int:
