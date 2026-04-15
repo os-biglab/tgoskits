@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import io
 import os
-import socket
+import re
 import shutil
+import socket
 import subprocess
 import sys
 import tarfile
+import tempfile
 import threading
 import time
 from importlib import util as importlib_util
@@ -17,8 +20,11 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[1]
 ARCH = "riscv64"
 TARGET = "riscv64gc-unknown-none-elf"
-PROMPT = "#"
+PROMPT = "root@starry:/root #"
 SERIAL_PORT = 4444
+ALPINE_REPO = "https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/riscv64"
+NGINX_APK = "nginx-1.28.3-r0.apk"
+PCRE2_APK = "pcre2-10.47-r0.apk"
 MUSL_TOOLCHAIN = "riscv64-linux-musl-cross"
 MUSL_CC = "riscv64-linux-musl-cc"
 MUSL_URLS = (
@@ -40,48 +46,6 @@ def command_env() -> dict[str, str]:
 
 def run(cmd: list[str], cwd: Path) -> None:
     subprocess.run(cmd, cwd=cwd, check=True, env=command_env())
-
-
-def ensure_riscv_musl_cc() -> None:
-    if shutil.which(MUSL_CC):
-        return
-
-    toolchains_dir = ROOT / ".cache" / "nginx-smoke" / "toolchains"
-    toolchains_dir.mkdir(parents=True, exist_ok=True)
-    local_cc = toolchains_dir / MUSL_TOOLCHAIN / "bin" / MUSL_CC
-    if local_cc.exists():
-        return
-
-    archive = toolchains_dir / f"{MUSL_TOOLCHAIN}.tgz"
-    last_error: Exception | None = None
-    for url in MUSL_URLS:
-        try:
-            print(f"[setup] downloading musl toolchain from: {url}")
-            with urlopen(url, timeout=120) as response, archive.open("wb") as out:
-                while True:
-                    chunk = response.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    out.write(chunk)
-            break
-        except Exception as exc:  # pragma: no cover - best-effort fallback path
-            last_error = exc
-            if archive.exists():
-                archive.unlink()
-    else:
-        raise RuntimeError(f"failed to download {MUSL_TOOLCHAIN}.tgz: {last_error}")
-
-    print(f"[setup] extracting {archive}")
-    with tarfile.open(archive, "r:gz") as tf:
-        try:
-            # Use a passthrough filter function on Python 3.12+; older Pythons will raise TypeError
-            tf.extractall(toolchains_dir, filter=lambda ti: ti)
-        except TypeError:  # pragma: no cover - Python < 3.12 fallback
-            tf.extractall(toolchains_dir)
-    archive.unlink(missing_ok=True)
-
-    if not local_cc.exists():
-        raise FileNotFoundError(f"musl toolchain install failed, missing {local_cc}")
 
 
 def detect_libclang_dir() -> Path | None:
@@ -122,11 +86,53 @@ def ensure_libclang() -> None:
         raise RuntimeError("libclang setup failed: libclang.so not found")
 
 
+def ensure_riscv_musl_cc() -> None:
+    if shutil.which(MUSL_CC):
+        return
+
+    toolchains_dir = ROOT / ".cache" / "nginx-smoke" / "toolchains"
+    toolchains_dir.mkdir(parents=True, exist_ok=True)
+    local_cc = toolchains_dir / MUSL_TOOLCHAIN / "bin" / MUSL_CC
+    if local_cc.exists():
+        return
+
+    archive = toolchains_dir / f"{MUSL_TOOLCHAIN}.tgz"
+    last_error: Exception | None = None
+    for url in MUSL_URLS:
+        try:
+            print(f"[setup] downloading musl toolchain from: {url}")
+            with urlopen(url, timeout=120) as response, archive.open("wb") as out:
+                while True:
+                    chunk = response.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    out.write(chunk)
+            break
+        except Exception as exc:  # pragma: no cover - fallback path
+            last_error = exc
+            if archive.exists():
+                archive.unlink()
+    else:
+        raise RuntimeError(f"failed to download {MUSL_TOOLCHAIN}.tgz: {last_error}")
+
+    print(f"[setup] extracting {archive}")
+    with tarfile.open(archive, "r:gz") as tf:
+        try:
+            tf.extractall(toolchains_dir, filter="data")
+        except TypeError:  # pragma: no cover - Python < 3.12 fallback
+            tf.extractall(toolchains_dir)
+    archive.unlink(missing_ok=True)
+
+    if not local_cc.exists():
+        raise FileNotFoundError(f"musl toolchain install failed, missing {local_cc}")
+
+
 def ensure_kernel_image() -> Path:
     candidates = [
+        ROOT / f"target/{TARGET}/release/starryos.bin",
+        ROOT / f"target/{TARGET}/release/starryos",
+        ROOT / f"target/{TARGET}/release/tgoskits_{ARCH}-qemu-virt.bin",
         ROOT / f"tgoskits_{ARCH}-qemu-virt.bin",
-        ROOT / "target" / TARGET / "release" / f"tgoskits_{ARCH}-qemu-virt.bin",
-        ROOT / "target" / TARGET / "release" / "starryos.bin",
     ]
     for candidate in candidates:
         if candidate.exists():
@@ -143,50 +149,205 @@ def ensure_kernel_image() -> Path:
 
 
 def prepare_rootfs() -> Path:
-    print("[setup] preparing StarryOS rootfs via cargo xtask")
-    run(["cargo", "xtask", "starry", "rootfs", "--arch", ARCH], ROOT)
     rootfs = ROOT / "target" / TARGET / f"rootfs-{ARCH}.img"
+    rootfs.unlink(missing_ok=True)
+    local_rootfs = ROOT / "os" / "StarryOS" / f"rootfs-{ARCH}.img"
+    if local_rootfs.exists():
+        print(f"[setup] copying local rootfs from {local_rootfs}")
+        shutil.copy2(local_rootfs, rootfs)
+    else:
+        print("[setup] preparing StarryOS rootfs via cargo xtask")
+        last_error: subprocess.CalledProcessError | None = None
+        for attempt in range(1, 4):
+            try:
+                run(["cargo", "xtask", "starry", "rootfs", "--arch", ARCH], ROOT)
+                break
+            except subprocess.CalledProcessError as exc:
+                last_error = exc
+                print(f"[setup] rootfs attempt {attempt} failed, retrying...", file=sys.stderr)
+                time.sleep(3)
+        else:
+            assert last_error is not None
+            raise last_error
     if not rootfs.exists():
         raise FileNotFoundError(f"rootfs image not found: {rootfs}")
     return rootfs
 
 
-def start_qemu(kernel: Path, rootfs: Path, use_user_net: bool = True) -> subprocess.Popen[str]:
-    """Start QEMU. If use_user_net is False, start without network device/backends."""
+def download_apk(name: str) -> bytes:
+    url = f"{ALPINE_REPO}/{name}"
+    last_error: Exception | None = None
+    for attempt in range(1, 4):
+        try:
+            print(f"[setup] downloading {name} from {url}")
+            with urlopen(url, timeout=120) as response:
+                return response.read()
+        except Exception as exc:  # pragma: no cover - network fallback
+            last_error = exc
+            print(f"[setup] download attempt {attempt} for {name} failed: {exc}", file=sys.stderr)
+            time.sleep(3)
+    assert last_error is not None
+    raise last_error
+
+
+def extract_apk(apk_bytes: bytes, workdir: Path) -> Path:
+    extracted = workdir / "apk"
+    extracted.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(fileobj=io.BytesIO(apk_bytes), mode="r:gz") as tf:
+        for member in tf.getmembers():
+            if member.name.startswith("."):
+                continue
+            if member.isdir():
+                (extracted / member.name).mkdir(parents=True, exist_ok=True)
+                continue
+            if member.issym():
+                link_path = extracted / member.name
+                link_path.parent.mkdir(parents=True, exist_ok=True)
+                if link_path.exists():
+                    link_path.unlink()
+                os.symlink(member.linkname, link_path)
+                continue
+            if member.isfile():
+                dest = extracted / member.name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with tf.extractfile(member) as src, dest.open("wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                dest.chmod(member.mode & 0o777)
+    return extracted
+
+
+def image_path_exists(image: Path, path: str) -> bool:
+    result = subprocess.run(
+        ["debugfs", "-R", f"stat {path}", str(image)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0 and "Inode:" in result.stdout
+
+
+def debugfs_batch(image: Path, commands: list[str]) -> None:
+    with tempfile.NamedTemporaryFile("w", delete=False) as fp:
+        for line in commands:
+            fp.write(line.rstrip() + "\n")
+        path = Path(fp.name)
+    try:
+        subprocess.run(["debugfs", "-w", "-f", str(path), str(image)], check=True)
+    finally:
+        path.unlink(missing_ok=True)
+
+
+def write_tree_to_rootfs(image: Path, source_root: Path) -> None:
+    dirs: list[str] = []
+    files: list[tuple[Path, str]] = []
+    symlinks: list[tuple[Path, str]] = []
+    for src in source_root.rglob("*"):
+        rel = src.relative_to(source_root).as_posix()
+        if src.is_dir():
+            dirs.append(rel)
+        elif src.is_symlink():
+            symlinks.append((src, rel))
+        elif src.is_file():
+            files.append((src, rel))
+
+    commands: list[str] = ["cd /"]
+    created_dirs: set[str] = set()
+    wanted_dirs: set[str] = set()
+    for dst in dirs:
+        path = Path(dst)
+        while str(path) not in (".", ""):
+            wanted_dirs.add(path.as_posix())
+            path = path.parent
+    wanted_dirs.update({"run/nginx"})
+
+    for dst in sorted(wanted_dirs, key=lambda item: item.count("/")):
+        if image_path_exists(image, dst) or dst in created_dirs:
+            continue
+        parent = str(Path(dst).parent)
+        if parent not in (".", "") and parent not in created_dirs and not image_path_exists(image, parent):
+            commands.append(f"mkdir {parent}")
+            created_dirs.add(parent)
+        commands.append(f"mkdir {dst}")
+        created_dirs.add(dst)
+
+    def append_file_ops(src: Path, dst: str) -> None:
+        parent = str(Path(dst).parent)
+        basename = Path(dst).name
+        if parent not in (".", ""):
+            commands.append(f"cd {parent}")
+        commands.append(f"write {src} {basename}")
+        mode = src.stat().st_mode & 0o777
+        if mode != 0o644:
+            commands.append(f"set_inode_field {basename} mode 0{mode:03o}")
+        if parent not in (".", ""):
+            commands.append("cd /")
+
+    for src, dst in files:
+        parent = str(Path(dst).parent)
+        if parent not in (".", "") and parent not in created_dirs and not image_path_exists(image, parent):
+            commands.append(f"mkdir {parent}")
+            created_dirs.add(parent)
+        append_file_ops(src, dst)
+
+    for src, dst in symlinks:
+        parent = str(Path(dst).parent)
+        basename = Path(dst).name
+        if parent not in (".", "") and parent not in created_dirs and not image_path_exists(image, parent):
+            commands.append(f"mkdir {parent}")
+            created_dirs.add(parent)
+        if parent not in (".", ""):
+            commands.append(f"cd {parent}")
+        commands.append(f"symlink {basename} {os.readlink(src)}")
+        if parent not in (".", ""):
+            commands.append("cd /")
+
+    if commands:
+        debugfs_batch(image, commands)
+
+
+def inject_nginx_into_rootfs(rootfs: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="nginx-smoke-") as td:
+        tmp = Path(td)
+        nginx_dir = extract_apk(download_apk(NGINX_APK), tmp)
+        pcre2_dir = extract_apk(download_apk(PCRE2_APK), tmp / "pcre2")
+        nginx_conf = nginx_dir / "etc" / "nginx" / "nginx.conf"
+        if nginx_conf.exists():
+            text = nginx_conf.read_text()
+            nginx_conf.write_text(text.replace("user nginx;", "user root;"))
+        write_tree_to_rootfs(rootfs, pcre2_dir)
+        write_tree_to_rootfs(rootfs, nginx_dir)
+
+
+def start_qemu(kernel: Path, rootfs: Path) -> subprocess.Popen[str]:
     if not shutil.which("qemu-system-riscv64"):
         raise FileNotFoundError("qemu-system-riscv64 not found in PATH")
-    cmd = [
-        "qemu-system-riscv64",
-        "-m",
-        "1G",
-        "-smp",
-        "1",
-        "-machine",
-        "virt",
-        "-bios",
-        "default",
-        "-kernel",
-        str(kernel),
-        "-device",
-        "virtio-blk-pci,drive=disk0",
-        "-drive",
-        f"id=disk0,if=none,format=raw,file={rootfs}",
-    ]
-    if use_user_net:
-        cmd += [
+    return subprocess.Popen(
+        [
+            "qemu-system-riscv64",
+            "-m",
+            "1G",
+            "-smp",
+            "1",
+            "-machine",
+            "virt",
+            "-bios",
+            "default",
+            "-kernel",
+            str(kernel),
             "-device",
-            "virtio-net-pci,netdev=net0",
-            "-netdev",
-            "user,id=net0",
-        ]
-    cmd += [
-        "-nographic",
-        "-monitor",
-        "none",
-        "-serial",
-        f"tcp::{SERIAL_PORT},server=on",
-    ]
-    return subprocess.Popen(cmd, cwd=ROOT, stderr=subprocess.PIPE, text=True)
+            "virtio-blk-pci,drive=disk0",
+            "-drive",
+            f"id=disk0,if=none,format=raw,file={rootfs}",
+            "-nographic",
+            "-monitor",
+            "none",
+            "-serial",
+            "tcp::4444,server=on",
+        ],
+        cwd=ROOT,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
 
 
 def wait_for_serial(proc: subprocess.Popen[str], qemu_stderr_lines: list[str]) -> None:
@@ -204,11 +365,7 @@ def wait_for_serial(proc: subprocess.Popen[str], qemu_stderr_lines: list[str]) -
     while time.time() < deadline:
         if proc.poll() is not None:
             stderr = "".join(qemu_stderr_lines)
-            if "network backend 'user' is not compiled into this binary" in stderr:
-                raise RuntimeError(
-                    "qemu user networking is unavailable. Install a qemu build with slirp support."
-                )
-            raise RuntimeError("QEMU exited prematurely")
+            raise RuntimeError(f"QEMU exited prematurely: {stderr.strip()}")
         try:
             with socket.create_connection(("127.0.0.1", SERIAL_PORT), timeout=2):
                 return
@@ -246,88 +403,49 @@ class SerialSession:
         self.sock.sendall(command.encode("utf-8") + b"\r\n")
 
     def run(self, command: str, timeout: int = 60) -> tuple[int, str]:
-        """
-        Run `command` in the guest shell and capture its exit code robustly.
-
-        To avoid issues where a separate `echo $?` may not expand reliably over the
-        serial connection, run the user's command inside `sh -lc '...; printf "<marker>%d\\n" "$?"'`
-        so that the command and the exit-code printing happen in the same shell invocation.
-        """
         marker = f"__NGINX_SMOKE_EXIT_{int(time.time() * 1000)}__"
-        # Escape single quotes to safely embed into sh -c '...'
-        safe_command = command.replace("'", "'\"'\"'")
-        wrapped = f"sh -lc '{safe_command}; printf \"{marker}%d\\n\" \"$?\"'"
-        # send the wrapped command and wait for the marker
-        self.send(wrapped)
-        self.read_until(marker, timeout=timeout)
-        tail = self.buffer.split(marker, 1)[1]
-        # first non-empty line after marker should be the numeric exit code
-        for ln in tail.splitlines():
-            ln = ln.strip()
-            if not ln:
-                continue
-            # try to parse an integer from the line
-            try:
-                exit_code = int(ln)
-                return exit_code, self.buffer
-            except ValueError:
-                # skip non-numeric lines until a numeric one appears
-                continue
-        # no numeric exit code found
-        raise RuntimeError(f"could not parse guest exit code from {tail!r}")
+        self.send(f"{command}; printf '{marker}%s\\n' \"$?\"")
+        deadline = time.time() + timeout
+        while True:
+            marker_index = self.buffer.rfind(marker)
+            if marker_index != -1:
+                tail = self.buffer[marker_index + len(marker) :]
+                match = re.match(r"(?P<code>\d+)\r?\n", tail)
+                if match is not None:
+                    return int(match.group("code")), self.buffer
+            if time.time() > deadline:
+                raise TimeoutError(f"timed out waiting for exit marker {marker!r}")
+            chunk = self.sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("serial connection closed")
+            text = chunk.decode("utf-8", errors="ignore")
+            self.buffer += text
+            print(text, end="")
 
 
 def main() -> int:
     kernel = ensure_kernel_image()
     rootfs = prepare_rootfs()
-    qemu_stderr_lines: list[str] = []
-    # Try starting QEMU with user networking first; if unavailable, retry without network device.
-    proc = start_qemu(kernel, rootfs, use_user_net=True)
-    session: SerialSession | None = None
-    no_user_net = False
-    try:
-        try:
-            wait_for_serial(proc, qemu_stderr_lines)
-        except RuntimeError as exc:
-            stderr = "".join(qemu_stderr_lines)
-            if "network backend 'user' is not compiled into this binary" in stderr:
-                print("[info] qemu user networking unavailable, retrying without network device")
-                try:
-                    proc.terminate()
-                    proc.wait(timeout=5)
-                except Exception:
-                    proc.kill()
-                    proc.wait(timeout=5)
-                qemu_stderr_lines.clear()
-                proc = start_qemu(kernel, rootfs, use_user_net=False)
-                no_user_net = True
-                wait_for_serial(proc, qemu_stderr_lines)
-            else:
-                raise
+    inject_nginx_into_rootfs(rootfs)
 
+    qemu_stderr_lines: list[str] = []
+    proc = start_qemu(kernel, rootfs)
+    session: SerialSession | None = None
+    try:
+        wait_for_serial(proc, qemu_stderr_lines)
         session = SerialSession("127.0.0.1", SERIAL_PORT)
         session.read_until(PROMPT, timeout=90)
+        session.run("stty -echo", timeout=30)
 
-        if no_user_net:
-            # Guest cannot fetch packages; try to start a minimal HTTP server if available (busybox or python),
-            # then verify HTTP locally.
-            steps = [
-                "if command -v busybox >/bin/sh && busybox httpd --help >/dev/null 2>&1; then busybox httpd -f -p 80 >/dev/null 2>&1 & sleep 1; elif command -v python3 >/bin/sh; then python3 -m http.server 80 >/dev/null 2>&1 & sleep 1; elif command -v python >/bin/sh; then python -m SimpleHTTPServer 80 >/dev/null 2>&1 & sleep 1; else false; fi",
-                "ok=0; for i in 1 2 3 4 5; do if curl -fsS http://127.0.0.1/ | grep -qi nginx; then ok=1; break; fi; sleep 1; done; test $ok -eq 1",
-            ]
-        else:
-            steps = [
-                "ok=0; for i in 1 2 3; do if apk add --no-cache nginx curl; then ok=1; break; fi; sleep 2; done; test $ok -eq 1",
-                "nginx || test $? -eq 0",
-                "ok=0; for i in 1 2 3 4 5; do if curl -fsS http://127.0.0.1/ | grep -qi nginx; then ok=1; break; fi; sleep 1; done; test $ok -eq 1",
-            ]
-
+        steps = [
+            "/usr/sbin/nginx",
+        ]
         for step in steps:
             code, _ = session.run(step, timeout=180)
             if code != 0:
                 raise RuntimeError(f"guest command failed: {step!r} (exit {code})")
 
-        session.run("exit", timeout=30)
+        session.send("exit")
         print("\nnginx smoke test passed")
         return 0
     finally:

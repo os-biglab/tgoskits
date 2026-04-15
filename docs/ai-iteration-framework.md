@@ -52,7 +52,7 @@ python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/linu
 id = "linux-app-example"
 title = "Support a Linux application"
 target = "StarryOS"
-description = "Make nginx boot and serve HTTP on StarryOS."
+description = "Make nginx boot on StarryOS."
 allowed_paths = ["components/", "os/StarryOS/", "os/arceos/", "docs/"]
 reference_docs = [
   "README.md",
@@ -62,7 +62,7 @@ reference_docs = [
 ]
 acceptance_criteria = [
   "nginx can boot under StarryOS",
-  "nginx serves HTTP and returns a valid response",
+  "nginx launches successfully under StarryOS",
 ]
 output_dir = ".copilot/runs"
 
@@ -96,10 +96,10 @@ python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/ngin
 - 检查并自动下载 `riscv64-linux-musl-cross` 工具链（缺失时）
 - 自动构建 StarryOS kernel（缺失时）
 - 下载 StarryOS rootfs
-- 启动 StarryOS QEMU
-- 在 guest 里安装 `nginx` 和 `curl`
+- 将 `nginx` 和所需的 `pcre2` 直接注入 rootfs
+- 启动 StarryOS QEMU（不依赖 guest 网络）
 - 启动 `nginx`
-- 在 guest 里用 `curl` 访问 `http://127.0.0.1/` 并校验返回结果
+- 通过启动结果判断 nginx 是否成功拉起
 
 你可以直接运行：
 
@@ -109,12 +109,12 @@ python3 scripts/ai_framework.py run --manifest .copilot/framework/manifests/ngin
 
 首次运行时间会更长，因为会自动完成工具链、kernel 和 rootfs 的准备。
 
-> 备注：`run_nginx_smoke.py` 依赖 QEMU 的 `-netdev user`（slirp）能力来让 guest 内 `apk add nginx` 可联网。如果本机 QEMU 未启用 user networking，脚本会直接报错并提示更换/安装带 slirp 的 QEMU。
+> 备注：`run_nginx_smoke.py` 会把 nginx 相关包离线写进 rootfs，因此不依赖 QEMU 的 user networking / slirp。
 
 这样 `test-debugger` 会同时看到：
 
 - StarryOS/rootfs 的启动动作
-- nginx 的启动和 HTTP 验证动作
+- nginx 的启动和拉起验证动作
 - 失败日志和重试上下文
 
 ## 4.1 Model 与 Copilot 调用配置

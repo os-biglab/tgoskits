@@ -30,33 +30,33 @@ command_timeout_sec = 0
 max_autopilot_continues = 0
 
 [stage_policies.implement]
-invoke_copilot = true
-autopilot = true
-max_attempts = 4
-retry_on_failure = true
-command_timeout_sec = 0
-max_autopilot_continues = 10
-
-[stage_policies.test]
-invoke_copilot = true
-autopilot = true
-max_attempts = 4
-retry_on_failure = true
-command_timeout_sec = 0
-max_autopilot_continues = 10
-
-[stage_policies.test-debugger]
-invoke_copilot = true
-autopilot = true
-max_attempts = 4
-retry_on_failure = true
-command_timeout_sec = 0
-max_autopilot_continues = 10
-
-[stage_policies.retry-smoke]
 invoke_copilot = false
 autopilot = false
-max_attempts = 2
-retry_on_failure = true
+max_attempts = 1
+retry_on_failure = false
+command_timeout_sec = 0
+max_autopilot_continues = 0
+
+[stage_policies.review]
+invoke_copilot = false
+autopilot = false
+max_attempts = 1
+retry_on_failure = false
+command_timeout_sec = 0
+max_autopilot_continues = 0
+
+[stage_policies.test]
+invoke_copilot = false
+autopilot = false
+max_attempts = 1
+retry_on_failure = false
+command_timeout_sec = 0
+max_autopilot_continues = 0
+
+[stage_policies.docs]
+invoke_copilot = false
+autopilot = false
+max_attempts = 1
+retry_on_failure = false
 command_timeout_sec = 0
 max_autopilot_continues = 0

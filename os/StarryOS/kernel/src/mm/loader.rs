@@ -211,7 +211,14 @@ impl ElfLoader {
             let cache = entry.borrow_cache();
             let mut data = vec![0; header.file_size as usize];
             let read = cache.read_at(&mut data[..], header.offset)?;
-            assert_eq!(data.len(), read);
+            if read != data.len() {
+                debug!(
+                    "Failed to read dynamic linker name: expected {} bytes, got {}",
+                    data.len(),
+                    read
+                );
+                return Err(AxError::InvalidInput);
+            }
 
             let ldso = CStr::from_bytes_with_nul(&data)
                 .ok()
