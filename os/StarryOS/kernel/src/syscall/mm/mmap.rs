@@ -324,7 +324,7 @@ pub fn sys_mremap(addr: usize, old_size: usize, new_size: usize, flags: u32) -> 
         addr.as_usize(),
         new_size,
         flags.bits() as _,
-        MmapFlags::PRIVATE.bits(),
+        (MmapFlags::PRIVATE | MmapFlags::ANONYMOUS).bits(),
         -1,
         0,
     )? as usize;
