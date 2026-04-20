@@ -75,26 +75,20 @@ pub fn probe_mmio_device(
 ///
 /// If the device is recognized, returns the device type and a transport object
 /// for later operations. Otherwise, returns [`None`].
+///
+/// The IRQ / APIC vector is no longer returned here; callers should obtain it
+/// from the PCI interrupt-line register (config byte 0x3C) and convert it to
+/// the platform-specific vector before passing it to the device constructor.
 pub fn probe_pci_device<H: VirtIoHal, C: ConfigurationAccess>(
     root: &mut PciRoot<C>,
     bdf: DeviceFunction,
     dev_info: &DeviceFunctionInfo,
-) -> Option<(DeviceType, PciTransport, usize)> {
+) -> Option<(DeviceType, PciTransport)> {
     use virtio_drivers::transport::pci::virtio_device_type;
-
-    #[cfg(target_arch = "x86_64")]
-    const PCI_IRQ_BASE: usize = 0x20;
-    #[cfg(target_arch = "riscv64")]
-    const PCI_IRQ_BASE: usize = 0x20;
-    #[cfg(target_arch = "loongarch64")]
-    const PCI_IRQ_BASE: usize = 0x10;
-    #[cfg(target_arch = "aarch64")]
-    const PCI_IRQ_BASE: usize = 0x23;
 
     let dev_type = virtio_device_type(dev_info).and_then(as_dev_type)?;
     let transport = PciTransport::new::<H, C>(root, bdf).ok()?;
-    let irq = PCI_IRQ_BASE + (bdf.device & 3) as usize;
-    Some((dev_type, transport, irq))
+    Some((dev_type, transport))
 }
 
 const fn as_dev_type(t: VirtIoDevType) -> Option<DeviceType> {

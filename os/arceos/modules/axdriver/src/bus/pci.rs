@@ -105,18 +105,53 @@ impl AllDevices {
                     continue;
                 }
                 match config_pci_device(&mut root, bdf, &mut allocator) {
-                    Ok(_) => for_each_drivers!(type Driver, {
-                        if let Some(dev) = Driver::probe_pci(&mut root, bdf, &dev_info) {
-                            info!(
-                                "registered a new {:?} device at {}: {:?}",
-                                dev.device_type(),
-                                bdf,
-                                dev.device_name(),
+                    Ok(_) => {
+                        // Determine the interrupt vector for this PCI device.
+                        //
+                        // x86_64 (QEMU q35 + SeaBIOS): SeaBIOS programs the PCI
+                        // interrupt line register (config byte 0x3C) with the ISA
+                        // IRQ (0-15) that the device's INTA# is wired to via the
+                        // Q35 PIRQ controller.  The IOAPIC (after init(0x20)) maps
+                        // pin P to APIC vector P+0x20, so the correct vector is
+                        // 0x20 + irq_line.  A value of 0xFF means "not connected".
+                        //
+                        // Other architectures (riscv64, aarch64, …): the interrupt
+                        // line register is not reliably set by firmware. Use the
+                        // traditional slot-based heuristic that has worked on those
+                        // platforms: 0x20 + (bdf.device & 3).
+                        #[cfg(target_arch = "x86_64")]
+                        let irq = {
+                            let irq_line = unsafe {
+                                let offset = Cam::Ecam.cam_offset(bdf, 0x3C) as usize;
+                                core::ptr::read_volatile(
+                                    (base_vaddr.as_usize() + offset) as *const u8,
+                                )
+                            };
+                            debug!(
+                                "PCI {bdf}: interrupt line {irq_line:#x} -> APIC vector {:#x}",
+                                0x20 + irq_line as usize
                             );
-                            self.add_device(dev);
-                            continue; // skip to the next device
-                        }
-                    }),
+                            if irq_line == 0xFF {
+                                0x20 + (bdf.device & 3) as usize
+                            } else {
+                                0x20 + irq_line as usize
+                            }
+                        };
+                        #[cfg(not(target_arch = "x86_64"))]
+                        let irq = 0x20 + (bdf.device & 3) as usize;
+                        for_each_drivers!(type Driver, {
+                            if let Some(dev) = Driver::probe_pci(&mut root, bdf, &dev_info, irq) {
+                                info!(
+                                    "registered a new {:?} device at {}: {:?}",
+                                    dev.device_type(),
+                                    bdf,
+                                    dev.device_name(),
+                                );
+                                self.add_device(dev);
+                                continue; // skip to the next device
+                            }
+                        });
+                    }
                     Err(e) => warn!("failed to enable PCI device at {bdf}({dev_info}): {e:?}"),
                 }
             }
