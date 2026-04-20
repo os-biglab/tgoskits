@@ -134,6 +134,7 @@ impl<D: VirtIoDevMeta> DriverProbe for VirtIoDriver<D> {
         root: &mut PciRoot<C>,
         bdf: DeviceFunction,
         dev_info: &DeviceFunctionInfo,
+        irq: usize,
     ) -> Option<AxDeviceEnum> {
         if dev_info.vendor_id != 0x1af4 {
             return None;
@@ -147,7 +148,7 @@ impl<D: VirtIoDevMeta> DriverProbe for VirtIoDriver<D> {
             _ => return None,
         }
 
-        if let Some((ty, transport, irq)) =
+        if let Some((ty, transport)) =
             ax_driver_virtio::probe_pci_device::<VirtIoHalImpl, C>(root, bdf, dev_info)
             && ty == D::DEVICE_TYPE
         {

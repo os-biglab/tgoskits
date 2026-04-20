@@ -26,6 +26,7 @@ pub trait DriverProbe {
         _root: &mut PciRoot<C>,
         _bdf: DeviceFunction,
         _dev_info: &DeviceFunctionInfo,
+        _irq: usize,
     ) -> Option<AxDeviceEnum> {
         None
     }
@@ -122,6 +123,7 @@ cfg_if::cfg_if! {
                 root: &mut ax_driver_pci::PciRoot<C>,
                 bdf: ax_driver_pci::DeviceFunction,
                 dev_info: &ax_driver_pci::DeviceFunctionInfo,
+                _irq: usize,
             ) -> Option<crate::AxDeviceEnum> {
                 use ax_driver_net::ixgbe::{INTEL_82599, INTEL_VEND, IxgbeNic};
                 if dev_info.vendor_id == INTEL_VEND && dev_info.device_id == INTEL_82599 {

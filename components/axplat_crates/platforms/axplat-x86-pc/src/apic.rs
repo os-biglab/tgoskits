@@ -25,17 +25,26 @@ static mut LOCAL_APIC: MaybeUninit<LocalApic> = MaybeUninit::uninit();
 static mut IS_X2APIC: bool = false;
 static IO_APIC: LazyInit<SpinNoIrq<IoApic>> = LazyInit::new();
 
-/// Enables or disables the given IRQ.
+/// Enables or disables the IOAPIC pin that delivers the given APIC vector.
+///
+/// After `IoApic::init(0x20)` each IOAPIC pin P is wired to vector P + 0x20,
+/// so to unmask the pin that fires `vector` we enable pin = vector − 0x20.
 #[cfg(feature = "irq")]
 pub fn set_enable(vector: usize, enabled: bool) {
-    // should not affect LAPIC interrupts
-    if vector < APIC_TIMER_VECTOR as _ {
-        unsafe {
-            if enabled {
-                IO_APIC.lock().enable_irq(vector as u8);
-            } else {
-                IO_APIC.lock().disable_irq(vector as u8);
-            }
+    // LAPIC timer / spurious / error vectors are handled by the LAPIC itself.
+    if vector >= APIC_TIMER_VECTOR as _ {
+        return;
+    }
+    // Vectors 0x20+ correspond to IOAPIC pins 0+ (offset == 0x20 from init()).
+    // Vectors below 0x20 are CPU exception slots — reject them.
+    let Some(pin) = vector.checked_sub(0x20) else {
+        return;
+    };
+    unsafe {
+        if enabled {
+            IO_APIC.lock().enable_irq(pin as u8);
+        } else {
+            IO_APIC.lock().disable_irq(pin as u8);
         }
     }
 }
@@ -95,7 +104,12 @@ pub fn init_primary() {
     }
 
     info!("Initialize IO APIC...");
-    let io_apic = unsafe { IoApic::new(phys_to_virt(IO_APIC_BASE).as_usize() as u64) };
+    let mut io_apic = unsafe { IoApic::new(phys_to_virt(IO_APIC_BASE).as_usize() as u64) };
+    // Program every Redirection Table Entry so that IOAPIC pin N delivers
+    // APIC vector (N + 0x20), all masked.  Without this call the RTEs keep
+    // their hardware-reset value of vector = 0, which the LAPIC silently
+    // drops, making set_enable() ineffective.
+    unsafe { io_apic.init(0x20) };
     IO_APIC.init_once(SpinNoIrq::new(io_apic));
 }
 
