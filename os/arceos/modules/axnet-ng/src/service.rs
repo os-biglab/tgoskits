@@ -4,6 +4,7 @@ use core::{
     task::{Context, Waker},
 };
 
+use ax_errno::{AxError, AxResult, LinuxError};
 use ax_hal::time::{NANOS_PER_MICROS, TimeValue, wall_time_nanos};
 use ax_task::future::sleep_until;
 use smoltcp::{
@@ -43,11 +44,15 @@ impl Service {
         self.router.dispatch(timestamp)
     }
 
-    pub fn get_source_address(&self, dst_addr: &IpAddress) -> IpAddress {
-        let Some(rule) = self.router.table.lookup(dst_addr) else {
-            panic!("no route to destination: {dst_addr}");
-        };
-        rule.src
+    pub fn get_source_address(&self, dst_addr: &IpAddress) -> AxResult<IpAddress> {
+        self.router
+            .table
+            .lookup(dst_addr)
+            .map(|rule| rule.src)
+            .ok_or_else(|| {
+                warn!("no route to destination: {dst_addr}");
+                AxError::from(LinuxError::ENETUNREACH)
+            })
     }
 
     pub fn device_mask_for(&self, endpoint: &IpListenEndpoint) -> u32 {

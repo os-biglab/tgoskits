@@ -160,7 +160,7 @@ impl SocketOps for UdpSocket {
         }
 
         let remote_addr = IpEndpoint::from(remote_addr);
-        let src = get_service().get_source_address(&remote_addr.addr);
+        let src = get_service().get_source_address(&remote_addr.addr)?;
         *guard = Some((remote_addr, src));
         debug!("UDP socket {}: connected to {}", self.handle, remote_addr);
         Ok(())
@@ -170,7 +170,7 @@ impl SocketOps for UdpSocket {
         let (remote_addr, source_addr) = match options.to {
             Some(addr) => {
                 let addr = IpEndpoint::from(addr.into_ip()?);
-                let src = get_service().get_source_address(&addr.addr);
+                let src = get_service().get_source_address(&addr.addr)?;
                 (addr, src)
             }
             None => self.remote_endpoint()?,

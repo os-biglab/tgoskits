@@ -1,5 +1,5 @@
 target = "loongarch64-unknown-none-softfloat"
-env = { AX_IP = "10.0.2.15", AX_GW = "10.0.2.2" }
+env = { AX_IP = "10.0.2.15", AX_GW = "10.0.2.2", AX_IP6 = "fec0::15", AX_GW6 = "fec0::2" }
 log = "Warn"
 features = ["qemu"]
 plat_dyn = false
