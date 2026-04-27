@@ -42,12 +42,12 @@ use alloc::{borrow::ToOwned, boxed::Box};
 
 use ax_driver::{AxDeviceContainer, prelude::*};
 use ax_sync::Mutex;
-use smoltcp::wire::{EthernetAddress, Ipv4Address, Ipv4Cidr};
+use smoltcp::wire::{EthernetAddress, Ipv4Address, Ipv4Cidr, Ipv6Address, Ipv6Cidr};
 use spin::{Lazy, Once};
 
 pub use self::socket::*;
 use self::{
-    consts::{GATEWAY, IP, IP_PREFIX},
+    consts::{GATEWAY, GW6, IP, IP_PREFIX, IP6},
     device::{EthernetDevice, LoopbackDevice},
     listen_table::ListenTable,
     router::{Router, Rule},
@@ -82,7 +82,15 @@ pub fn init_network(mut net_devs: AxDeviceContainer<AxNetDevice>) {
         lo_ip.address().into(),
     ));
 
-    let eth0_ip = if let Some(dev) = net_devs.take_one() {
+    let lo_ip6 = Ipv6Cidr::new(Ipv6Address::new(0, 0, 0, 0, 0, 0, 0, 1), 128);
+    router.add_rule(Rule::new(
+        lo_ip6.into(),
+        None,
+        lo_dev,
+        lo_ip6.address().into(),
+    ));
+
+    let (eth0_ip, eth0_ip6) = if let Some(dev) = net_devs.take_one() {
         info!("  use NIC 0: {:?}", dev.device_name());
 
         let eth0_address = EthernetAddress(dev.mac_address().0);
@@ -92,6 +100,7 @@ pub fn init_network(mut net_devs: AxDeviceContainer<AxNetDevice>) {
             "eth0".to_owned(),
             dev,
             eth0_ip,
+            (!IP6.is_empty()).then(|| IP6.parse().expect("Invalid IPv6 address (AX_IP6)")),
         )));
 
         router.add_rule(Rule::new(
@@ -105,10 +114,29 @@ pub fn init_network(mut net_devs: AxDeviceContainer<AxNetDevice>) {
         info!("  mac:  {}", eth0_address);
         info!("  ip:   {}", eth0_ip);
 
-        Some(eth0_ip)
+        // Configure IPv6 on eth0 when AX_IP6/AX_GW6 are set (e.g. QEMU SLIRP fec0::/64).
+        let eth0_ip6 = if !IP6.is_empty() && !GW6.is_empty() {
+            let ip6: Ipv6Address = IP6.parse().expect("Invalid IPv6 address (AX_IP6)");
+            let gw6: Ipv6Address = GW6.parse().expect("Invalid IPv6 gateway (AX_GW6)");
+            let cidr6 = Ipv6Cidr::new(ip6, 64);
+
+            router.add_rule(Rule::new(
+                Ipv6Cidr::new(Ipv6Address::UNSPECIFIED, 0).into(),
+                Some(gw6.into()),
+                eth0_dev,
+                ip6.into(),
+            ));
+
+            info!("  ip6:  {}", cidr6);
+            Some(cidr6)
+        } else {
+            None
+        };
+
+        (Some(eth0_ip), eth0_ip6)
     } else {
         warn!("  No network device found!");
-        None
+        (None, None)
     };
 
     for dev in &router.devices {
@@ -118,8 +146,12 @@ pub fn init_network(mut net_devs: AxDeviceContainer<AxNetDevice>) {
     let mut service = Service::new(router);
     service.iface.update_ip_addrs(|ip_addrs| {
         ip_addrs.push(lo_ip.into()).unwrap();
+        ip_addrs.push(lo_ip6.into()).unwrap();
         if let Some(eth0_ip) = eth0_ip {
             ip_addrs.push(eth0_ip.into()).unwrap();
+        }
+        if let Some(eth0_ip6) = eth0_ip6 {
+            ip_addrs.push(eth0_ip6.into()).unwrap();
         }
     });
     SERVICE.call_once(|| Mutex::new(service));
