@@ -106,7 +106,7 @@ impl TcpSocket {
                 SocketAddr::V6(SocketAddrV6::new(v4.to_ipv6_mapped(), endpoint.port, 0, 0))
             }
             (true, Some(IpAddress::Ipv6(v6))) => {
-                SocketAddr::V6(SocketAddrV6::new(v6.into(), endpoint.port, 0, 0))
+                SocketAddr::V6(SocketAddrV6::new(v6, endpoint.port, 0, 0))
             }
             (true, None) => SocketAddr::V6(SocketAddrV6::new(
                 Ipv6Addr::UNSPECIFIED,
@@ -115,10 +115,10 @@ impl TcpSocket {
                 0,
             )),
             (false, Some(IpAddress::Ipv4(v4))) => {
-                SocketAddr::V4(SocketAddrV4::new(v4.into(), endpoint.port))
+                SocketAddr::V4(SocketAddrV4::new(v4, endpoint.port))
             }
             (false, Some(IpAddress::Ipv6(v6))) => {
-                SocketAddr::V6(SocketAddrV6::new(v6.into(), endpoint.port, 0, 0))
+                SocketAddr::V6(SocketAddrV6::new(v6, endpoint.port, 0, 0))
             }
             (false, None) => {
                 SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, endpoint.port))
@@ -132,13 +132,11 @@ impl TcpSocket {
                 SocketAddr::V6(SocketAddrV6::new(v4.to_ipv6_mapped(), endpoint.port, 0, 0))
             }
             (true, IpAddress::Ipv6(v6)) => {
-                SocketAddr::V6(SocketAddrV6::new(v6.into(), endpoint.port, 0, 0))
+                SocketAddr::V6(SocketAddrV6::new(v6, endpoint.port, 0, 0))
             }
-            (false, IpAddress::Ipv4(v4)) => {
-                SocketAddr::V4(SocketAddrV4::new(v4.into(), endpoint.port))
-            }
+            (false, IpAddress::Ipv4(v4)) => SocketAddr::V4(SocketAddrV4::new(v4, endpoint.port)),
             (false, IpAddress::Ipv6(v6)) => {
-                SocketAddr::V6(SocketAddrV6::new(v6.into(), endpoint.port, 0, 0))
+                SocketAddr::V6(SocketAddrV6::new(v6, endpoint.port, 0, 0))
             }
         }
     }
@@ -258,7 +256,7 @@ impl Configurable for TcpSocket {
 }
 impl SocketOps for TcpSocket {
     fn bind(&self, local_addr: SocketAddrEx) -> AxResult {
-        let mut local_addr = self.general.require_ip_addr(local_addr)?;
+        let mut local_addr = self.general.wire_ip_addr(local_addr)?;
         self.state
             .lock(State::Idle)
             .map_err(|_| ax_err_type!(InvalidInput, "already bound"))?
@@ -294,7 +292,7 @@ impl SocketOps for TcpSocket {
     }
 
     fn connect(&self, remote_addr: SocketAddrEx) -> AxResult {
-        let remote_addr = self.general.require_ip_addr(remote_addr)?;
+        let remote_addr = self.general.wire_ip_addr(remote_addr)?;
         self.state
             .lock(State::Idle)
             .map_err(|state| {

@@ -1,4 +1,5 @@
 use alloc::{boxed::Box, collections::VecDeque, sync::Arc, vec};
+use core::net::{Ipv4Addr, Ipv6Addr};
 
 use ax_errno::{AxError, AxResult};
 use ax_sync::Mutex;
@@ -29,6 +30,35 @@ impl ListenTableEntryInner {
             syn_queue: VecDeque::with_capacity(LISTEN_QUEUE_SIZE),
             is_ipv6,
             v6only,
+        }
+    }
+
+    fn covers_ipv4(&self) -> bool {
+        if self.v6only {
+            return false;
+        }
+        match self.listen_endpoint.addr {
+            None => true,
+            Some(IpAddress::Ipv4(_)) => true,
+            Some(IpAddress::Ipv6(addr)) => addr.is_unspecified() || addr.to_ipv4_mapped().is_some(),
+        }
+    }
+
+    fn matches_v4(&self, dst: Ipv4Addr) -> bool {
+        match self.listen_endpoint.addr {
+            None => !self.v6only,
+            Some(IpAddress::Ipv4(addr)) => addr == dst,
+            Some(IpAddress::Ipv6(addr)) => {
+                !self.v6only && (addr.is_unspecified() || addr.to_ipv4_mapped() == Some(dst))
+            }
+        }
+    }
+
+    fn matches_v6(&self, dst: Ipv6Addr) -> bool {
+        match self.listen_endpoint.addr {
+            None => true,
+            Some(IpAddress::Ipv6(addr)) => addr == dst,
+            Some(IpAddress::Ipv4(_)) => false,
         }
     }
 }
@@ -79,28 +109,21 @@ impl ListenTable {
         let mut entry = self.tcp[port as usize].lock();
 
         if is_ipv6 {
-            // AF_INET6 dual-stack listener conflicts with both AF_INET and AF_INET6.
-            if !v6only {
-                if entry.v4.is_some() || entry.v6.is_some() {
-                    warn!("socket already listening on port {port}");
-                    return Err(AxError::AddrInUse);
-                }
-            } else if entry.v6.is_some() {
-                // AF_INET6 + IPV6_V6ONLY=1 only conflicts with AF_INET6 listener.
+            let new_entry = ListenTableEntryInner::new(listen_endpoint, true, v6only);
+            let conflicts_v4 = new_entry.covers_ipv4() && entry.v4.is_some();
+            let conflicts_v6 = entry.v6.is_some();
+            if conflicts_v4 || conflicts_v6 {
                 warn!("socket already listening on port {port}");
                 return Err(AxError::AddrInUse);
             }
 
-            entry.v6 = Some(Box::new(ListenTableEntryInner::new(
-                listen_endpoint,
-                true,
-                v6only,
-            )));
+            entry.v6 = Some(Box::new(new_entry));
             return Ok(());
         }
 
-        // AF_INET listener conflicts with AF_INET and AF_INET6 dual-stack listener.
-        if entry.v4.is_some() || entry.v6.as_ref().is_some_and(|it| !it.v6only) {
+        let conflicts_v4 = entry.v4.is_some();
+        let conflicts_v6 = entry.v6.as_ref().is_some_and(|it| it.covers_ipv4());
+        if conflicts_v4 || conflicts_v6 {
             warn!("socket already listening on port {port}");
             return Err(AxError::AddrInUse);
         }
@@ -188,21 +211,25 @@ impl ListenTable {
         let mut table = table.lock();
 
         let entry = match dst.addr {
-            IpAddress::Ipv4(_) => {
-                if table.v4.is_some() {
+            IpAddress::Ipv4(dst) => {
+                if table.v4.as_ref().is_some_and(|it| it.matches_v4(dst)) {
                     table.v4.as_mut()
+                } else if table.v6.as_ref().is_some_and(|it| it.matches_v4(dst)) {
+                    table.v6.as_mut()
                 } else {
-                    table.v6.as_mut().filter(|it| !it.v6only)
+                    None
                 }
             }
-            IpAddress::Ipv6(_) => table.v6.as_mut(),
+            IpAddress::Ipv6(dst) => {
+                if table.v6.as_ref().is_some_and(|it| it.matches_v6(dst)) {
+                    table.v6.as_mut()
+                } else {
+                    None
+                }
+            }
         };
 
         if let Some(entry) = entry {
-            // IPV6_V6ONLY: reject IPv4 connections on an IPv6-only socket
-            if entry.v6only && matches!(dst.addr, IpAddress::Ipv4(_)) {
-                return;
-            }
             if entry.syn_queue.len() >= LISTEN_QUEUE_SIZE {
                 // SYN queue is full, drop the packet
                 warn!("SYN queue overflow!");

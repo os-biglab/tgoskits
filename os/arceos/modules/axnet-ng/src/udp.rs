@@ -77,13 +77,11 @@ impl UdpSocket {
                 SocketAddr::V6(SocketAddrV6::new(v4.to_ipv6_mapped(), endpoint.port, 0, 0))
             }
             (true, IpAddress::Ipv6(v6)) => {
-                SocketAddr::V6(SocketAddrV6::new(v6.into(), endpoint.port, 0, 0))
+                SocketAddr::V6(SocketAddrV6::new(v6, endpoint.port, 0, 0))
             }
-            (false, IpAddress::Ipv4(v4)) => {
-                SocketAddr::V4(SocketAddrV4::new(v4.into(), endpoint.port))
-            }
+            (false, IpAddress::Ipv4(v4)) => SocketAddr::V4(SocketAddrV4::new(v4, endpoint.port)),
             (false, IpAddress::Ipv6(v6)) => {
-                SocketAddr::V6(SocketAddrV6::new(v6.into(), endpoint.port, 0, 0))
+                SocketAddr::V6(SocketAddrV6::new(v6, endpoint.port, 0, 0))
             }
         }
     }
@@ -139,7 +137,7 @@ impl Configurable for UdpSocket {
 }
 impl SocketOps for UdpSocket {
     fn bind(&self, local_addr: SocketAddrEx) -> AxResult {
-        let mut local_addr = self.general.require_ip_addr(local_addr)?;
+        let mut local_addr = self.general.wire_ip_addr(local_addr)?;
         let mut guard = self.local_addr.write();
 
         if local_addr.port() == 0 {
@@ -175,7 +173,7 @@ impl SocketOps for UdpSocket {
     }
 
     fn connect(&self, remote_addr: SocketAddrEx) -> AxResult {
-        let remote_addr = self.general.require_ip_addr(remote_addr)?;
+        let remote_addr = self.general.wire_ip_addr(remote_addr)?;
         let mut guard = self.peer_addr.write();
         if self.local_addr.read().is_none() {
             self.bind(SocketAddrEx::Ip(self.default_unspecified_addr(0)))?;
@@ -191,7 +189,7 @@ impl SocketOps for UdpSocket {
     fn send(&self, mut src: impl Read + IoBuf, options: SendOptions) -> AxResult<usize> {
         let (remote_addr, source_addr) = match options.to {
             Some(addr) => {
-                let addr = IpEndpoint::from(self.general.require_ip_addr(addr)?);
+                let addr = IpEndpoint::from(self.general.wire_ip_addr(addr)?);
                 let src = get_service().get_source_address(&addr.addr)?;
                 (addr, src)
             }

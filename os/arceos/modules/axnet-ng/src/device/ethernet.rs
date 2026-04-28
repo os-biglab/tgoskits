@@ -11,7 +11,7 @@ use smoltcp::{
     wire::{
         ArpOperation, ArpPacket, ArpRepr, EthernetAddress, EthernetFrame, EthernetProtocol,
         EthernetRepr, Icmpv6Packet, Icmpv6Repr, IpAddress, IpProtocol, Ipv4Cidr, Ipv6Address,
-        Ipv6Packet, Ipv6Repr, NdiscNeighborFlags, NdiscRepr,
+        Ipv6Packet, Ipv6Repr, NdiscNeighborFlags, NdiscRepr, RawHardwareAddress,
     },
 };
 
@@ -276,9 +276,51 @@ impl EthernetDevice {
         }
     }
 
+    fn validate_ndp_ns(
+        ipv6_src: Ipv6Address,
+        ipv6_dst: Ipv6Address,
+        target_addr: Ipv6Address,
+        lladdr: &Option<RawHardwareAddress>,
+    ) -> bool {
+        if ipv6_src.is_multicast() {
+            return false;
+        }
+
+        if target_addr.is_multicast() {
+            return false;
+        }
+
+        let expected_dst = Self::ipv6_solicited_node(target_addr);
+        if ipv6_dst != expected_dst {
+            return false;
+        }
+
+        if ipv6_src.is_unspecified() {
+            return lladdr.is_none();
+        }
+
+        true
+    }
+
+    fn validate_ndp_na(
+        ipv6_src: Ipv6Address,
+        ipv6_dst: Ipv6Address,
+        flags: NdiscNeighborFlags,
+        target_addr: Ipv6Address,
+    ) -> bool {
+        if ipv6_src.is_multicast() || target_addr.is_multicast() {
+            return false;
+        }
+        if ipv6_dst.is_multicast() && flags.contains(NdiscNeighborFlags::SOLICITED) {
+            return false;
+        }
+        true
+    }
+
     fn process_ndp_neighbor_discovery(
         &mut self,
         ipv6_src: Ipv6Address,
+        ipv6_dst: Ipv6Address,
         ndp: NdiscRepr,
         now: Instant,
     ) {
@@ -287,6 +329,10 @@ impl EthernetDevice {
                 target_addr,
                 lladdr,
             } => {
+                if !Self::validate_ndp_ns(ipv6_src, ipv6_dst, target_addr, &lladdr) {
+                    return;
+                }
+
                 if let Some(lladdr) = lladdr {
                     let ll = lladdr.as_bytes();
                     if ll.len() == 6 {
@@ -356,8 +402,13 @@ impl EthernetDevice {
             NdiscRepr::NeighborAdvert {
                 target_addr,
                 lladdr,
+                flags,
                 ..
             } => {
+                if !Self::validate_ndp_na(ipv6_src, ipv6_dst, flags, target_addr) {
+                    return;
+                }
+
                 let Some(lladdr) = lladdr else {
                     return;
                 };
@@ -402,7 +453,7 @@ impl EthernetDevice {
             &icmp_packet,
             &ChecksumCapabilities::default(),
         ) {
-            self.process_ndp_neighbor_discovery(ipv6.src_addr(), ndp, now);
+            self.process_ndp_neighbor_discovery(ipv6.src_addr(), ipv6.dst_addr(), ndp, now);
         }
     }
 
@@ -530,22 +581,18 @@ impl Device for EthernetDevice {
             }
 
             let need_request = match self.neighbors.get(&next_hop) {
-                Some(Some(neighbor)) => {
-                    if neighbor.expires_at > timestamp {
-                        Self::send_to(
-                            &mut self.inner,
-                            neighbor.hardware_address,
-                            packet.len(),
-                            |buf| buf.copy_from_slice(packet),
-                            EthernetProtocol::Ipv6,
-                        );
-                        return false;
-                    } else {
-                        true
-                    }
+                Some(Some(neighbor)) if neighbor.expires_at > timestamp => {
+                    Self::send_to(
+                        &mut self.inner,
+                        neighbor.hardware_address,
+                        packet.len(),
+                        |buf| buf.copy_from_slice(packet),
+                        EthernetProtocol::Ipv6,
+                    );
+                    return false;
                 }
+                Some(Some(_)) | None => true,
                 Some(None) => false,
-                None => true,
             };
 
             if need_request {
@@ -610,5 +657,54 @@ impl Device for EthernetDevice {
         if let Some(irq) = self.inner.irq_num() {
             register_irq_waker(irq, waker);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_target() -> Ipv6Address {
+        Ipv6Address::from([
+            0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x00, 0x5e, 0xff, 0xfe, 0x00, 0x00, 0x01,
+        ])
+    }
+
+    fn sample_solicited_node() -> Ipv6Address {
+        EthernetDevice::ipv6_solicited_node(sample_target())
+    }
+
+    #[test]
+    fn ndp_ns_rejects_unspecified_source_with_lladdr() {
+        let lladdr = Some(RawHardwareAddress::from_bytes(&[0, 1, 2, 3, 4, 5]));
+        assert!(!EthernetDevice::validate_ndp_ns(
+            Ipv6Address::UNSPECIFIED,
+            sample_solicited_node(),
+            sample_target(),
+            &lladdr,
+        ));
+    }
+
+    #[test]
+    fn ndp_ns_rejects_wrong_destination() {
+        let lladdr = None;
+        assert!(!EthernetDevice::validate_ndp_ns(
+            Ipv6Address::UNSPECIFIED,
+            Ipv6Address::from([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]),
+            sample_target(),
+            &lladdr,
+        ));
+    }
+
+    #[test]
+    fn ndp_na_rejects_solicited_multicast_destination() {
+        assert!(!EthernetDevice::validate_ndp_na(
+            Ipv6Address::from([
+                0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x00, 0x5e, 0xff, 0xfe, 0x00, 0x00, 0x01
+            ]),
+            Ipv6Address::from([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]),
+            NdiscNeighborFlags::SOLICITED,
+            sample_target(),
+        ));
     }
 }

@@ -1,5 +1,5 @@
 use core::{
-    net::SocketAddr,
+    net::{SocketAddr, SocketAddrV4},
     sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering},
     task::Waker,
     time::Duration,
@@ -70,6 +70,21 @@ impl GeneralOptions {
         let addr = addr.into_ip()?;
         if addr.is_ipv6() != self.is_ipv6() {
             return Err(ax_errno::AxError::from(LinuxError::EAFNOSUPPORT));
+        }
+        Ok(addr)
+    }
+
+    pub fn wire_ip_addr(&self, addr: SocketAddrEx) -> AxResult<SocketAddr> {
+        let addr = self.require_ip_addr(addr)?;
+        if self.is_ipv6() && !self.v6only() {
+            match addr {
+                SocketAddr::V6(v6) => {
+                    if let Some(v4) = v6.ip().to_ipv4_mapped() {
+                        return Ok(SocketAddr::V4(SocketAddrV4::new(v4, v6.port())));
+                    }
+                }
+                SocketAddr::V4(_) => {}
+            }
         }
         Ok(addr)
     }

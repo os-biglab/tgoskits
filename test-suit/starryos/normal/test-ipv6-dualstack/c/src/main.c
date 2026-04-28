@@ -173,6 +173,71 @@ static void test_dualstack_accepts_v4(void)
     wait_child(pid, "dual-stack: AF_INET client connect + send succeeded");
 }
 
+/* ── C. AF_INET6 客户端连接 IPv4-mapped 地址 ───────────────────── */
+static void test_dualstack_accepts_v6_mapped_v4(void)
+{
+    int server = socket(AF_INET6, SOCK_STREAM, 0);
+    if (server < 0) { __fail++; return; }
+
+    int one = 1;
+    setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+
+    int zero = 0;
+    CHECK_RET(setsockopt(server, IPPROTO_IPV6, IPV6_V6ONLY, &zero, sizeof(zero)),
+              0, "setsockopt(IPV6_V6ONLY=0 for mapped connect)");
+
+    struct sockaddr_in6 saddr = {0};
+    saddr.sin6_family = AF_INET6;
+    saddr.sin6_port   = htons(BASE_PORT + 3);
+    saddr.sin6_addr   = in6addr_any;
+
+    if (bind(server, (struct sockaddr *)&saddr, sizeof(saddr)) != 0 ||
+        listen(server, 5) != 0) {
+        close(server);
+        __fail++;
+        return;
+    }
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        close(server);
+        int c = socket(AF_INET6, SOCK_STREAM, 0);
+        if (c < 0) _exit(1);
+        struct sockaddr_in6 dst = {0};
+        dst.sin6_family = AF_INET6;
+        dst.sin6_port = htons(BASE_PORT + 3);
+        if (inet_pton(AF_INET6, "::ffff:127.0.0.1", &dst.sin6_addr) != 1) {
+            close(c);
+            _exit(2);
+        }
+        if (connect(c, (struct sockaddr *)&dst, sizeof(dst)) != 0) {
+            close(c);
+            _exit(3);
+        }
+        ssize_t n = send(c, MSG, MSGLEN, 0);
+        close(c);
+        _exit(n == (ssize_t)MSGLEN ? 0 : 1);
+    }
+
+    struct sockaddr_in6 peer = {0};
+    socklen_t plen = sizeof(peer);
+    int conn = accept(server, (struct sockaddr *)&peer, &plen);
+    CHECK(conn >= 0, "IPv4-mapped AF_INET6 client accepted");
+
+    if (conn >= 0) {
+        CHECK(IN6_IS_ADDR_V4MAPPED(&peer.sin6_addr),
+              "IPv4-mapped AF_INET6 peer address");
+        char buf[32] = {0};
+        ssize_t n = recv(conn, buf, sizeof(buf), 0);
+        CHECK(n == (ssize_t)MSGLEN, "recv from mapped AF_INET6 client");
+        CHECK(memcmp(buf, MSG, MSGLEN) == 0, "mapped AF_INET6 client data");
+        close(conn);
+    }
+
+    close(server);
+    wait_child(pid, "dual-stack: AF_INET6 mapped client connect + send succeeded");
+}
+
 /* ── C. IPv6-only 客户端连接 IPv6-only 服务端 ───────────────────── */
 static void test_v6only_pure_ipv6(void)
 {
@@ -234,6 +299,7 @@ int main(void)
 
     test_v6only_rejects_v4();
     test_dualstack_accepts_v4();
+    test_dualstack_accepts_v6_mapped_v4();
     test_v6only_pure_ipv6();
 
     TEST_DONE();
