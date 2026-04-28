@@ -384,6 +384,9 @@ impl EthernetDevice {
         let Ok(ipv6) = Ipv6Packet::new_checked(payload) else {
             return;
         };
+        if ipv6.hop_limit() != 0xff {
+            return;
+        }
         if ipv6.next_header() != IpProtocol::Icmpv6 {
             return;
         }
@@ -393,7 +396,12 @@ impl EthernetDevice {
         if !icmp_packet.msg_type().is_ndisc() || icmp_packet.msg_code() != 0 {
             return;
         }
-        if let Ok(ndp) = NdiscRepr::parse(&icmp_packet) {
+        if let Ok(Icmpv6Repr::Ndisc(ndp)) = Icmpv6Repr::parse(
+            &ipv6.src_addr(),
+            &ipv6.dst_addr(),
+            &icmp_packet,
+            &ChecksumCapabilities::default(),
+        ) {
             self.process_ndp_neighbor_discovery(ipv6.src_addr(), ndp, now);
         }
     }
