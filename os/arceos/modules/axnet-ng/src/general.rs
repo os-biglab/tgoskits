@@ -1,15 +1,16 @@
 use core::{
+    net::SocketAddr,
     sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering},
     task::Waker,
     time::Duration,
 };
 
-use ax_errno::AxResult;
+use ax_errno::{AxResult, LinuxError};
 use ax_task::future::{block_on, poll_io, timeout};
 use axpoll::{IoEvents, Pollable};
 
 use crate::{
-    get_service,
+    SocketAddrEx, get_service,
     options::{Configurable, GetSocketOption, SetSocketOption},
 };
 
@@ -63,6 +64,14 @@ impl GeneralOptions {
 
     pub fn is_ipv6(&self) -> bool {
         self.is_ipv6.load(Ordering::Relaxed)
+    }
+
+    pub fn require_ip_addr(&self, addr: SocketAddrEx) -> AxResult<SocketAddr> {
+        let addr = addr.into_ip()?;
+        if addr.is_ipv6() != self.is_ipv6() {
+            return Err(ax_errno::AxError::from(LinuxError::EAFNOSUPPORT));
+        }
+        Ok(addr)
     }
 
     pub fn set_is_ipv6(&self, val: bool) {
