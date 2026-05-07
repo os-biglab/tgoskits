@@ -431,14 +431,23 @@ impl Starry {
         cargo: &Cargo,
         apply_default_args: bool,
     ) -> anyhow::Result<ostool::run::qemu::QemuConfig> {
-        let mut qemu = match request.qemu_config.as_deref() {
+        // Resolve the QEMU config path: explicit flag > versioned template in
+        // configs/qemu/ > ostool auto-create fallback (unknown arch only).
+        let config_path: Option<PathBuf> = request
+            .qemu_config
+            .clone()
+            .or_else(|| starry_qemu_config_template(self.app.workspace_root(), &request.arch));
+
+        let mut qemu = match config_path {
             Some(path) => {
                 self.app
                     .tool_mut()
-                    .read_qemu_config_from_path_for_cargo(cargo, path)
+                    .read_qemu_config_from_path_for_cargo(cargo, &path)
                     .await?
             }
             None => {
+                // Unknown arch — no template exists; let ostool create a
+                // minimal default as a last resort.
                 self.app
                     .tool_mut()
                     .ensure_qemu_config_for_cargo(cargo)
@@ -601,6 +610,15 @@ impl Starry {
         )?;
         self.run_uboot_request(request).await
     }
+}
+
+/// Returns the path to the versioned QEMU run-config template for `arch` under
+/// `os/StarryOS/configs/qemu/qemu-{arch}.toml`, or `None` if no such file exists.
+fn starry_qemu_config_template(workspace_root: &Path, arch: &str) -> Option<PathBuf> {
+    let path = workspace_root
+        .join("os/StarryOS/configs/qemu")
+        .join(format!("qemu-{arch}.toml"));
+    path.exists().then_some(path)
 }
 
 #[cfg(test)]
