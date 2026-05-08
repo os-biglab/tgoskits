@@ -164,6 +164,24 @@ impl TimeManager {
         (utime, stime)
     }
 
+    /// Accumulates CPU time for the current tick without emitting signals.
+    ///
+    /// Safe to call from IRQ/timer-callback context.  Signal-bearing itimers
+    /// are checked only through the full `poll()` path at syscall boundaries.
+    pub fn tick(&mut self) {
+        let now_ns = monotonic_time_nanos() as usize;
+        // Saturating sub avoids wrap-around on first call (last_wall_ns == 0).
+        let delta = now_ns.saturating_sub(self.last_wall_ns);
+        match self.state {
+            TimerState::User => self.utime_ns += delta,
+            TimerState::Kernel => self.stime_ns += delta,
+            TimerState::None => {}
+        }
+        // Always advance the baseline so the next poll() sees a small delta,
+        // not the full uptime accumulated since task creation.
+        self.last_wall_ns = now_ns;
+    }
+
     /// Polls the time manager to update the timers and emit signals if
     /// necessary.
     pub fn poll(&mut self, emitter: impl Fn(Signo)) {
