@@ -81,3 +81,4 @@ RUN set -eux; \
 WORKDIR /workspace
 
 CMD ["/bin/bash"]
+
