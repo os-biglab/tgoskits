@@ -69,6 +69,8 @@ RUN set -eux; \
 
 COPY rust-toolchain.toml /tmp/rust-toolchain/rust-toolchain.toml
 
+RUN ls
+
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --profile minimal --default-toolchain none
 
@@ -81,3 +83,4 @@ RUN set -eux; \
 WORKDIR /workspace
 
 CMD ["/bin/bash"]
+
