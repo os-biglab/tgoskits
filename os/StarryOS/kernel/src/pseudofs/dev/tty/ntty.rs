@@ -1,4 +1,5 @@
 use alloc::sync::Arc;
+use core::time::Duration;
 
 use axpoll::PollSet;
 use lazy_static::lazy_static;
@@ -46,7 +47,7 @@ fn new_n_tty() -> Arc<NTtyDriver> {
         TtyConfig {
             reader: Console,
             writer: Console,
-            process_mode: console_irq_mode().unwrap_or(ProcessMode::Manual),
+            process_mode: console_irq_mode().unwrap_or_else(console_polling_mode),
         },
     )
 }
@@ -54,10 +55,28 @@ fn new_n_tty() -> Arc<NTtyDriver> {
 fn console_irq_mode() -> Option<ProcessMode> {
     let irq = ax_hal::console::irq_num()?;
     if !ax_hal::irq::register(irq, handle_console_input_irq) {
-        warn!("Failed to register console IRQ handler for irq {irq}, falling back to manual mode");
+        warn!("Failed to register console IRQ handler for irq {irq}, falling back to polling mode");
         return None;
     }
 
     ax_hal::console::set_input_irq_enabled(true);
     Some(ProcessMode::InterruptDriven(CONSOLE_INPUT_SOURCE.clone()))
+}
+
+/// Fallback for platforms without a console IRQ (e.g. x86-qemu-q35).
+///
+/// Spawns a background task that wakes the reader every millisecond so that
+/// signal characters (Ctrl+C, Ctrl+Z, …) are delivered even when no process
+/// is blocked on a `read()` syscall.
+fn console_polling_mode() -> ProcessMode {
+    let source = Arc::new(PollSet::new());
+    let source_clone = source.clone();
+    ax_task::spawn_with_name(
+        move || loop {
+            source_clone.wake();
+            ax_task::sleep(Duration::from_millis(1));
+        },
+        "console-poll".into(),
+    );
+    ProcessMode::InterruptDriven(source)
 }
