@@ -113,8 +113,8 @@ impl JBD2DEVSYSTEM {
                     // s_maxlen is 0 or smaller than s_first — it is corrupted.
                     // Fall back to the physical extent length.
                     warn!(
-                        "[JBD2] s_maxlen={} < s_first={}: journal superblock s_maxlen is \
-                         corrupt, using physical extent length {} instead",
+                        "[JBD2] s_maxlen={} < s_first={}: journal superblock s_maxlen is corrupt, \
+                         using physical extent length {} instead",
                         sb_maxlen, self.jbd2_super_block.s_first, len
                     );
                     len
