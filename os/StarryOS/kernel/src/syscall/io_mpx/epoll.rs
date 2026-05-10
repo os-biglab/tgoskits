@@ -1,3 +1,4 @@
+use alloc::vec;
 use core::time::Duration;
 
 use ax_errno::{AxError, AxResult};
@@ -100,12 +101,8 @@ fn do_epoll_wait(
     // We operate on kernel memory and write results back via vm_write_slice,
     // avoiding direct references to user memory that can trigger unhandled
     // COW write-faults from kernel mode.
-    let mut kevents: alloc::vec::Vec<epoll_event> = unsafe {
-        let mut v = alloc::vec::Vec::with_capacity(maxevents);
-        v.set_len(maxevents);
-        core::ptr::write_bytes(v.as_mut_ptr(), 0, maxevents);
-        v
-    };
+    // epoll_event derives Copy, so vec![zero; n] is safe and avoids unsafe.
+    let mut kevents = vec![epoll_event { events: 0, data: 0 }; maxevents];
 
     let count = with_blocked_signals(
         nullable!(sigmask.get_as_ref())?.copied(),
