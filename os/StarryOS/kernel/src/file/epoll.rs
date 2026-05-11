@@ -273,14 +273,7 @@ impl Epoll {
     }
 
     // Register waker only — no immediate poll check.
-    // Used after NoEvent: the interest was spuriously woken (e.g. a shared
-    // PollSet wake that turned out not to match this fd's events).  We just
-    // re-arm the waker and wait for a real state change.  Using
-    // check_and_register_waker here would immediately re-queue the interest
-    // whenever file.poll() reports any ready bits (e.g. TCP OUT is always
-    // set on a connected socket), causing an infinite busy-loop that fills
-    // the ready_queue with duplicate interests and makes epoll_pwait return
-    // maxevents spurious events on every call.
+    // Used for NoEvent (spurious wakeup): re-arm and wait for a real state change.
     fn register_waker_only(&self, interest: &Arc<EpollInterest>) {
         let Some(file) = interest.key.get_file() else {
             return;
@@ -297,6 +290,53 @@ impl Epoll {
 
         let mut context = Context::from_waker(&waker);
         file.register(&mut context, interest.event.events);
+    }
+
+    // Used after EPOLLET event delivery (EventAndRemove).
+    // Registers waker first (closing the race window), then checks if data
+    // arrived between mark_not_in_queue and now.  If so, queues the interest
+    // directly — but does NOT call waker.wake_by_ref(), which would cause
+    // check_and_register_waker's re-queue to trigger another immediate
+    // poll_events call before the application reads the fd, creating a
+    // busy-loop for fds with a continuous data stream (e.g. Unix socket with
+    // subscription feed).
+    fn rearm_after_et_event(&self, interest: &Arc<EpollInterest>) {
+        let Some(file) = interest.key.get_file() else {
+            return;
+        };
+
+        if !interest.is_enabled() {
+            return;
+        }
+
+        let waker = Waker::from(Arc::new(InterestWaker {
+            epoll: Arc::downgrade(&self.inner),
+            interest: Arc::downgrade(interest),
+        }));
+
+        let mut context = Context::from_waker(&waker);
+        file.register(&mut context, interest.event.events);
+
+        // Race-window check: data may have arrived between mark_not_in_queue
+        // above and register() just now.  If so, put the interest back into
+        // the ready_queue so the next epoll_wait sees it.  We enqueue directly
+        // rather than calling waker.wake_by_ref() so that we don't
+        // immediately spin back into poll_events before the application has
+        // had a chance to read the fd.
+        if interest.try_mark_in_queue() {
+            let current = file.poll() & interest.event.events;
+            if current.is_empty() {
+                // No data — undo the mark and let the waker fire when data arrives.
+                interest.mark_not_in_queue();
+            } else {
+                self.inner
+                    .ready_queue
+                    .lock()
+                    .push_back(Arc::downgrade(interest));
+                // Wake poll_ready so a blocking epoll_wait is notified.
+                self.inner.poll_ready.wake();
+            }
+        }
     }
 
     // for add/modify
@@ -405,6 +445,7 @@ impl Epoll {
         // into the loop and filling out[] with duplicates of one ready fd.
         let mut txlist = core::mem::take(&mut *self.inner.ready_queue.lock());
         let mut count = 0;
+        let mut no_event_count = 0usize;
         let mut keep: VecDeque<Weak<EpollInterest>> = VecDeque::new();
 
         while let Some(weak_interest) = txlist.pop_front() {
@@ -424,9 +465,10 @@ impl Epoll {
                 continue;
             };
 
+            let current_poll = file.poll();
             trace!(
-                "Epoll: consuming ready interest for fd={}, events={:?}",
-                interest.key.fd, interest.event.events
+                "Epoll: consuming ready interest for fd={}, interest_events={:?}, file.poll()={:?}",
+                interest.key.fd, interest.event.events, current_poll
             );
 
             match interest.consume(file.as_ref()) {
@@ -461,10 +503,12 @@ impl Epoll {
                     }
                 }
                 ConsumeResult::NoEvent => {
+                    no_event_count += 1;
+                    warn!(
+                        "Epoll: NoEvent fd={} interest={:?} file.poll()={:?} (spurious #{})",
+                        interest.key.fd, interest.event.events, current_poll, no_event_count
+                    );
                     interest.mark_not_in_queue();
-                    // Spurious wakeup: re-arm without an immediate poll check.
-                    // check_and_register_waker would re-queue instantly whenever
-                    // file.poll() reports any ready bit, causing a busy-loop.
                     self.register_waker_only(&interest);
                 }
             }
@@ -482,6 +526,7 @@ impl Epoll {
         if count == 0 {
             Err(AxError::WouldBlock)
         } else {
+            warn!("Epoll: poll_events returning count={count}, no_event_count={no_event_count}");
             Ok(count)
         }
     }
