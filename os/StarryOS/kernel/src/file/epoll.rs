@@ -272,25 +272,6 @@ impl Epoll {
         Self::default()
     }
 
-    // only register waker, not add to ready queue
-    fn register_waker_only(&self, interest: &Arc<EpollInterest>) {
-        let Some(file) = interest.key.get_file() else {
-            return;
-        };
-
-        if !interest.is_enabled() {
-            return;
-        }
-
-        let waker = Waker::from(Arc::new(InterestWaker {
-            epoll: Arc::downgrade(&self.inner),
-            interest: Arc::downgrade(interest),
-        }));
-
-        let mut context = Context::from_waker(&waker);
-        file.register(&mut context, interest.event.events);
-    }
-
     // for add/modify
     fn check_and_register_waker(&self, interest: &Arc<EpollInterest>) {
         let Some(file) = interest.key.get_file() else {
