@@ -272,6 +272,33 @@ impl Epoll {
         Self::default()
     }
 
+    // Register waker only — no immediate poll check.
+    // Used after NoEvent: the interest was spuriously woken (e.g. a shared
+    // PollSet wake that turned out not to match this fd's events).  We just
+    // re-arm the waker and wait for a real state change.  Using
+    // check_and_register_waker here would immediately re-queue the interest
+    // whenever file.poll() reports any ready bits (e.g. TCP OUT is always
+    // set on a connected socket), causing an infinite busy-loop that fills
+    // the ready_queue with duplicate interests and makes epoll_pwait return
+    // maxevents spurious events on every call.
+    fn register_waker_only(&self, interest: &Arc<EpollInterest>) {
+        let Some(file) = interest.key.get_file() else {
+            return;
+        };
+
+        if !interest.is_enabled() {
+            return;
+        }
+
+        let waker = Waker::from(Arc::new(InterestWaker {
+            epoll: Arc::downgrade(&self.inner),
+            interest: Arc::downgrade(interest),
+        }));
+
+        let mut context = Context::from_waker(&waker);
+        file.register(&mut context, interest.event.events);
+    }
+
     // for add/modify
     fn check_and_register_waker(&self, interest: &Arc<EpollInterest>) {
         let Some(file) = interest.key.get_file() else {
@@ -435,12 +462,10 @@ impl Epoll {
                 }
                 ConsumeResult::NoEvent => {
                     interest.mark_not_in_queue();
-                    // Events arriving between consume()'s poll and the new
-                    // register() would otherwise be lost: the old waker
-                    // CAS-fails (in_ready_queue still set), and a plain
-                    // register only fires on the next edge. Re-poll after
-                    // registering to recover them.
-                    self.check_and_register_waker(&interest);
+                    // Spurious wakeup: re-arm without an immediate poll check.
+                    // check_and_register_waker would re-queue instantly whenever
+                    // file.poll() reports any ready bit, causing a busy-loop.
+                    self.register_waker_only(&interest);
                 }
             }
         }
