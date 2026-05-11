@@ -242,7 +242,7 @@ impl TransportOps for StreamTransport {
             };
             total += count;
             if count > 0 {
-                warn!("UnixStream: sent {} bytes, waking peer", count);
+                debug!("UnixStream: sent {} bytes, waking peer", count);
                 chan.poll_update.wake();
             }
 
@@ -271,7 +271,7 @@ impl TransportOps for StreamTransport {
                 count
             };
             if count > 0 {
-                warn!("UnixStream: recv got {} bytes", count);
+                debug!("UnixStream: recv got {} bytes", count);
                 chan.poll_update.wake();
                 Ok(count)
             } else if !chan.rx.write_is_held() {

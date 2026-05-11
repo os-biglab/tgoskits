@@ -176,7 +176,7 @@ pub fn init_vsock(mut vsock_devs: AxDeviceContainer<AxVsockDevice>) {
 pub fn poll_interfaces() {
     let count = POLL_INTERFACES_COUNT.fetch_add(1, Ordering::Relaxed);
     if count % 200 == 0 {
-        warn!("poll_interfaces called {} times total", count);
+        debug!("poll_interfaces called {} times total", count);
     }
     POLL_AGAIN.store(true, Ordering::Release);
     loop {

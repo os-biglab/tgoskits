@@ -163,7 +163,7 @@ impl TcpSocket {
         let mut events = IoEvents::empty();
         self.with_smol_socket(|socket| match socket.state() {
             smol::State::SynSent | smol::State::SynReceived => {
-                warn!("TCP {}: poll_connect — still SynSent/SynReceived (waiting)", self.handle);
+                debug!("TCP {}: poll_connect — still SynSent/SynReceived (waiting)", self.handle);
             }
             smol::State::Established => {
                 self.clear_pending_error();
@@ -514,7 +514,7 @@ impl SocketOps for TcpSocket {
                             (len, result)
                         })
                         .map_err(|_| ax_err_type!(NotConnected, "not connected?"))??;
-                    warn!("TCP {}: sent {} bytes", self.handle, len);
+                    debug!("TCP {}: sent {} bytes", self.handle, len);
                     Ok(len)
                 }
             })
@@ -555,7 +555,7 @@ impl SocketOps for TcpSocket {
                             (len, result)
                         })
                         .map_err(|_| ax_err_type!(NotConnected, "not connected?"))??;
-                    warn!("TCP {}: recv got {} bytes", self.handle, n);
+                    debug!("TCP {}: recv got {} bytes", self.handle, n);
                     Ok(n)
                 }
             })
