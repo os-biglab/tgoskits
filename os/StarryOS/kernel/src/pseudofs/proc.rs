@@ -859,6 +859,22 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
         SimpleDir::new_maker(fs.clone(), Arc::new(dynamic_debug))
     });
 
+    #[cfg(feature = "strace")]
+    root.add(
+        "strace",
+        SimpleFile::new_regular(
+            fs.clone(),
+            RwFile::new(move |req| match req {
+                SimpleFileOperation::Read => Ok(Some(crate::strace::imp::drain())),
+                SimpleFileOperation::Write(data) => {
+                    let filter = core::str::from_utf8(data).unwrap_or("");
+                    crate::strace::imp::set_filter(filter);
+                    Ok(None)
+                }
+            }),
+        ),
+    );
+
     let proc_dir = ProcFsHandler(fs.clone());
     SimpleDir::new_maker(fs, Arc::new(proc_dir.chain(root)))
 }

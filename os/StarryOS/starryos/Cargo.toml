@@ -32,6 +32,7 @@ smp = ["ax-feat/smp", "axplat-dyn?/smp", "axplat-riscv64-visionfive2?/smp"]
 sg2002 = ["ax-plat-riscv64-sg2002", "ax-feat/driver-cvsd"]
 
 rknpu = ["dep:axplat-dyn", "starry-kernel/rknpu", "axplat-dyn/rknpu"]
+strace = ["starry-kernel/strace"]
 vf2 = ["dep:axplat-riscv64-visionfive2", "ax-feat/driver-sdmmc"]
 
 [[bin]]

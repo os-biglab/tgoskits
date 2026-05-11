@@ -22,6 +22,7 @@ mod file;
 mod mm;
 mod pseudofs;
 mod stop_machine;
+mod strace;
 mod syscall;
 mod task;
 mod time;

@@ -18,6 +18,8 @@ pub use self::{
     fs::*, io_mpx::*, ipc::*, mm::*, net::*, resources::*, signal::*, sync::*, sys::*, task::*,
     time::*,
 };
+#[cfg(feature = "strace")]
+use crate::strace;
 
 pub fn syscall_allows_signal_restart(sysno: usize) -> bool {
     !matches!(Sysno::new(sysno), Some(Sysno::msgsnd | Sysno::msgrcv))
@@ -31,6 +33,16 @@ pub fn handle_syscall(uctx: &mut UserContext) {
     };
 
     trace!("Syscall {sysno:?}");
+
+    #[cfg(feature = "strace")]
+    let strace_args = [
+        uctx.arg0(),
+        uctx.arg1(),
+        uctx.arg2(),
+        uctx.arg3(),
+        uctx.arg4(),
+        uctx.arg5(),
+    ];
 
     let result = match sysno {
         // fs ctl
@@ -717,5 +729,21 @@ pub fn handle_syscall(uctx: &mut UserContext) {
     };
     debug!("Syscall {sysno} return {result:?}");
 
-    uctx.set_retval(result.unwrap_or_else(|err| -LinuxError::from(err).code() as _) as _);
+    let retval = result.unwrap_or_else(|err| -LinuxError::from(err).code() as _);
+
+    #[cfg(feature = "strace")]
+    {
+        let task = ax_task::current();
+        let name = task.name();
+        let tid = task.id().as_u64();
+        strace::imp::record(
+            &name,
+            tid,
+            &alloc::format!("{sysno:?}"),
+            strace_args,
+            retval as isize,
+        );
+    }
+
+    uctx.set_retval(retval as _);
 }
