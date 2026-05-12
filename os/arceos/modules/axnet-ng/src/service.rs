@@ -359,7 +359,7 @@ impl Service {
                 self.timeout = Some(fut);
             }
         } else {
-            warn!("Service::register_waker: no next poll_at (no pending timers), mask={mask:#x}");
+            debug!("Service::register_waker: no next poll_at (no pending timers), mask={mask:#x}");
         }
 
         for (i, device) in self.router.devices.iter().enumerate() {

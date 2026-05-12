@@ -10,7 +10,11 @@ args = [
   "virtio-net-pci,netdev=net0",
   "-netdev",
   "user,id=net0",
+  "-debugcon",
+  "file:/tmp/debugcon.log",
 ]
+# kernel warn/error logs are mirrored to /tmp/debugcon.log (no ANSI, via port 0xE9)
+# run:  tail -f /tmp/debugcon.log   on the host while QEMU is running
 uefi = false
 to_bin = false
 success_regex = []
