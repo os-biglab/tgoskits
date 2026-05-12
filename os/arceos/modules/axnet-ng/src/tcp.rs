@@ -163,9 +163,10 @@ impl TcpSocket {
         let mut events = IoEvents::empty();
         self.with_smol_socket(|socket| match socket.state() {
             smol::State::SynSent | smol::State::SynReceived => {
-                debug!(
-                    "TCP {}: poll_connect — still SynSent/SynReceived (waiting)",
-                    self.handle
+                warn!(
+                    "TCP {}: poll_connect — still {:?} (retrying)",
+                    self.handle,
+                    socket.state()
                 );
             }
             smol::State::Established => {
@@ -381,9 +382,9 @@ impl SocketOps for TcpSocket {
                 if bound_endpoint.port == 0 {
                     bound_endpoint.port = get_ephemeral_port()?;
                 }
-                info!(
-                    "TCP connection from {} to {}",
-                    bound_endpoint, remote_endpoint
+                warn!(
+                    "TCP {}: connect from {} to {}",
+                    self.handle, bound_endpoint, remote_endpoint
                 );
                 let register_bound = !self.bound_registered.load(Ordering::Acquire);
                 if register_bound {
