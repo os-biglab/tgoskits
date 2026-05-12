@@ -284,6 +284,13 @@ impl CloneArgs {
         let task = spawn_task(new_task);
         add_task_to_table(&task);
 
+        let curr_name = current().id_name();
+        if flags.contains(CloneFlags::THREAD) {
+            debug!("do_clone: new thread tid={tid} in process of {curr_name}");
+        } else {
+            warn!("do_clone: fork pid={tid} from {curr_name} flags={flags:?}");
+        }
+
         // Block the parent until the child exec's or exits.
         if flags.contains(CloneFlags::VFORK) {
             new_proc_data.wait_vfork_done();

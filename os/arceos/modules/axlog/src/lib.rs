@@ -135,6 +135,34 @@ impl Write for Logger {
     }
 }
 
+/// Secondary log sink: QEMU debugcon device at I/O port 0xE9 (x86_64 only).
+///
+/// Enable in QEMU with `-debugcon file:/tmp/debugcon.log` (or `stdio`).
+/// All warn/error log records are mirrored here in plain text (no ANSI codes)
+/// so the serial console stays readable while the diagnostic log accumulates
+/// in a separate file.
+#[cfg(all(not(feature = "std"), target_arch = "x86_64"))]
+struct DebugCon;
+
+#[cfg(all(not(feature = "std"), target_arch = "x86_64"))]
+impl Write for DebugCon {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for b in s.bytes() {
+            // SAFETY: writing to the QEMU debugcon I/O port is a pure side-effect
+            // with no observable memory hazard; `options(nomem, nostack)` is correct.
+            unsafe {
+                core::arch::asm!(
+                    "out dx, al",
+                    in("dx") 0xe9u16,
+                    in("al") b,
+                    options(nomem, nostack, preserves_flags)
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
 impl Log for Logger {
     #[inline]
     fn enabled(&self, _metadata: &Metadata) -> bool {
@@ -185,6 +213,19 @@ impl Log for Logger {
                             line = line,
                             args = with_color!(args_color, "{}", record.args()),
                         ));
+                        #[cfg(target_arch = "x86_64")]
+                        if level <= Level::Warn {
+                            let _ = DebugCon.write_fmt(format_args!(
+                                "[{:>3}.{:06} {cpu_id}:{tid} {path}:{line}] {args}\n",
+                                now.as_secs(),
+                                now.subsec_micros(),
+                                cpu_id = cpu_id,
+                                tid = tid,
+                                path = path,
+                                line = line,
+                                args = record.args(),
+                            ));
+                        }
                     } else {
                         // show CPU ID only
                         __print_impl(with_color!(
@@ -197,6 +238,18 @@ impl Log for Logger {
                             line = line,
                             args = with_color!(args_color, "{}", record.args()),
                         ));
+                        #[cfg(target_arch = "x86_64")]
+                        if level <= Level::Warn {
+                            let _ = DebugCon.write_fmt(format_args!(
+                                "[{:>3}.{:06} {cpu_id} {path}:{line}] {args}\n",
+                                now.as_secs(),
+                                now.subsec_micros(),
+                                cpu_id = cpu_id,
+                                path = path,
+                                line = line,
+                                args = record.args(),
+                            ));
+                        }
                     }
                 } else {
                     // neither CPU ID nor task ID is shown
@@ -209,6 +262,17 @@ impl Log for Logger {
                         line = line,
                         args = with_color!(args_color, "{}", record.args()),
                     ));
+                    #[cfg(target_arch = "x86_64")]
+                    if level <= Level::Warn {
+                        let _ = DebugCon.write_fmt(format_args!(
+                            "[{:>3}.{:06} {path}:{line}] {args}\n",
+                            now.as_secs(),
+                            now.subsec_micros(),
+                            path = path,
+                            line = line,
+                            args = record.args(),
+                        ));
+                    }
                 }
             }
         }
