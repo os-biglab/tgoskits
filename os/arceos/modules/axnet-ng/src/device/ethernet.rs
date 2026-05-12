@@ -67,6 +67,7 @@ fn handle_ethernet_irq(slot: usize) {
 
     let events = state.handle_irq();
     if events.intersects(NetIrqEvent::RX_READY | NetIrqEvent::RX_ERROR) {
+        warn!("EthernetDevice: IRQ slot={slot} RX_READY — waking TCP poll_ready");
         state.poll_ready.wake();
     }
 }
@@ -536,8 +537,14 @@ impl Device for EthernetDevice {
     }
 
     fn register_waker(&self, waker: &Waker) {
-        if self.inner.irq_num.is_some() {
+        if let Some(irq) = self.inner.irq_num {
+            warn!("EthernetDevice: register_waker on IRQ={irq}");
             self.inner.poll_ready.register(waker);
+        } else {
+            warn!(
+                "EthernetDevice: register_waker called but irq_num=None — waker NOT registered, \
+                 TCP wake will never fire!"
+            );
         }
     }
 }

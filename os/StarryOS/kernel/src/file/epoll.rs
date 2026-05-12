@@ -452,7 +452,29 @@ impl Epoll {
                         keep.push_back(Arc::downgrade(&interest));
                     } else {
                         interest.mark_not_in_queue();
+                        // EPOLLET: re-arm by registering waker only, then close the
+                        // race window.  Between mark_not_in_queue() above and the
+                        // register() inside register_waker_only(), the underlying
+                        // source (e.g. chan.poll_update) may have been woken with an
+                        // empty PollSet — that wake() is silently dropped.  After
+                        // re-arming, check IN-type events and immediately re-queue
+                        // if data is already present.  We deliberately skip OUT here
+                        // to avoid a busy-loop when the TX buffer is always writable.
                         self.register_waker_only(&interest);
+                        if let Some(file) = interest.key.get_file() {
+                            let in_mask = interest.event.events
+                                & (IoEvents::IN | IoEvents::RDHUP | IoEvents::HUP);
+                            if !in_mask.is_empty()
+                                && !(file.poll() & in_mask).is_empty()
+                                && interest.try_mark_in_queue()
+                            {
+                                self.inner
+                                    .ready_queue
+                                    .lock()
+                                    .push_back(Arc::downgrade(&interest));
+                                self.inner.poll_ready.wake();
+                            }
+                        }
                     }
                 }
                 ConsumeResult::NoEvent => {

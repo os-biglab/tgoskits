@@ -175,7 +175,7 @@ pub fn init_vsock(mut vsock_devs: AxDeviceContainer<AxVsockDevice>) {
 /// Poll all network interfaces for new events.
 pub fn poll_interfaces() {
     let count = POLL_INTERFACES_COUNT.fetch_add(1, Ordering::Relaxed);
-    if count % 200 == 0 {
+    if count.is_multiple_of(200) {
         debug!("poll_interfaces called {} times total", count);
     }
     POLL_AGAIN.store(true, Ordering::Release);
