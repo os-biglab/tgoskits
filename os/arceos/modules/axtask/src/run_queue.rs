@@ -421,9 +421,16 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
         // Mark the task as blocked, this has to be done before adding it to the wait queue
         // while holding the lock of the wait queue.
         curr.set_state(TaskState::Blocked);
-        curr.set_in_wait_queue(true);
-
-        wq_guard.push_back(curr.clone());
+        // Guard against double-add: if the task was spuriously woken by an AxWaker
+        // (e.g. a network wakeup arriving while waiting for a sleeping mutex), it
+        // re-enters blocked_resched with in_wait_queue still true. Pushing again
+        // creates a duplicate entry; a later notify_one_with during unlock would
+        // hand ownership to the stale entry while the task is not waiting,
+        // causing a re-entrant mutex panic.
+        if !curr.in_wait_queue() {
+            curr.set_in_wait_queue(true);
+            wq_guard.push_back(curr.clone());
+        }
         // Drop the lock of wait queue explictly.
         drop(wq_guard);
 
