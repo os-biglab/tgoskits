@@ -162,6 +162,43 @@ impl DeviceOps for CpuDmaLatency {
     }
 }
 
+/// QEMU debugcon device (I/O port 0xE9). Userspace writes land in the
+/// `-debugcon` output file, bypassing the TTY and jcode's log rotation.
+/// Only meaningful on x86_64 with QEMU `-debugcon` configured.
+#[cfg(target_arch = "x86_64")]
+struct DebugConDev;
+
+#[cfg(target_arch = "x86_64")]
+impl DeviceOps for DebugConDev {
+    fn read_at(&self, _buf: &mut [u8], _offset: u64) -> VfsResult<usize> {
+        Ok(0)
+    }
+
+    fn write_at(&self, buf: &[u8], _offset: u64) -> VfsResult<usize> {
+        for &b in buf {
+            // SAFETY: writing to the QEMU debugcon port is a pure side-effect;
+            // no memory is read or written.
+            unsafe {
+                core::arch::asm!(
+                    "out dx, al",
+                    in("dx") 0xe9u16,
+                    in("al") b,
+                    options(nomem, nostack, preserves_flags)
+                );
+            }
+        }
+        Ok(buf.len())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn flags(&self) -> NodeFlags {
+        NodeFlags::NON_CACHEABLE | NodeFlags::STREAM
+    }
+}
+
 fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     let mut root = DirMapping::new();
     root.add(
@@ -277,6 +314,16 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             NodeType::CharacterDevice,
             DeviceId::new(10, 1024),
             Arc::new(CpuDmaLatency),
+        ),
+    );
+    #[cfg(target_arch = "x86_64")]
+    root.add(
+        "debugcon",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(1, 254),
+            Arc::new(DebugConDev),
         ),
     );
 
