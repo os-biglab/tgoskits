@@ -10,6 +10,10 @@ license.workspace = true
 [features]
 std = ["dep:chrono"]
 default = []
+# On x86_64, route all log records exclusively to the QEMU debugcon device
+# (I/O port 0xE9) and suppress the UART / serial console output.
+# Enable for QEMU builds to keep the terminal clean.
+debugcon-only = []
 
 [dependencies]
 axpanic.workspace = true

@@ -117,7 +117,6 @@ fn do_epoll_wait(
         },
     )?;
 
-    // Write only the filled events back to user space.
     if count > 0 {
         vm_write_slice(
             events.address().as_usize() as *mut epoll_event,

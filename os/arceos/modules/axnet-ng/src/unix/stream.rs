@@ -225,6 +225,24 @@ impl TransportOps for StreamTransport {
         ))
     }
 
+    fn try_accept(&self) -> AxResult<(Transport, UnixSocketAddr)> {
+        let Some((rx, _)) = self.conn_rx.lock().clone() else {
+            return Err(AxError::NotConnected);
+        };
+        match rx.try_recv() {
+            Ok(ConnRequest {
+                channel,
+                addr: peer_addr,
+                pid,
+            }) => Ok((
+                Transport::Stream(StreamTransport::new_channel(Some(channel), pid)),
+                peer_addr,
+            )),
+            Err(async_channel::TryRecvError::Empty) => Err(AxError::WouldBlock),
+            Err(async_channel::TryRecvError::Closed) => Err(AxError::ConnectionReset),
+        }
+    }
+
     fn send(&self, mut src: impl Read + IoBuf, options: SendOptions) -> AxResult<usize> {
         if options.to.is_some() {
             return Err(AxError::InvalidInput);
@@ -252,7 +270,6 @@ impl TransportOps for StreamTransport {
             };
             total += count;
             if count > 0 {
-                debug!("UnixStream: sent {} bytes, waking peer", count);
                 chan.poll_update.wake();
             }
 
@@ -270,7 +287,6 @@ impl TransportOps for StreamTransport {
             let Some(chan) = guard.as_mut() else {
                 return Err(AxError::NotConnected);
             };
-
             let count = {
                 let (left, right) = chan.rx.as_slices();
                 let mut count = dst.write(left)?;
@@ -281,11 +297,9 @@ impl TransportOps for StreamTransport {
                 count
             };
             if count > 0 {
-                debug!("UnixStream: recv got {} bytes", count);
                 chan.poll_update.wake();
                 Ok(count)
             } else if !chan.rx.write_is_held() || chan.peer_tx_closed.load(Ordering::Acquire) {
-                // Peer closed (either HeapProd dropped or tx_closed flag set): EOF.
                 Ok(0)
             } else {
                 Err(AxError::WouldBlock)

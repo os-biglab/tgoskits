@@ -43,7 +43,7 @@ impl Wake for AxWaker {
         if let Some(task) = self.task.upgrade() {
             let mut rq = select_run_queue::<NoPreemptIrqSave>(&task);
             *self.woke.lock() = true;
-            rq.unblock_task(task, false);
+            rq.unblock_task(task, true);
         }
     }
 }

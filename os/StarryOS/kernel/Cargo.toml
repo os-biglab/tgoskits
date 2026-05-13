@@ -52,7 +52,7 @@ ax-fs = { path = "../../arceos/modules/axfs-ng", package = "ax-fs-ng" }
 ax-hal.workspace = true
 ax-input = { workspace = true, optional = true }
 ax-lazyinit.workspace = true
-ax-log.workspace = true
+ax-log = { workspace = true, features = ["debugcon-only"] }
 ax-mm.workspace = true
 axnet = { path = "../../arceos/modules/axnet-ng", package = "ax-net-ng" }
 axplat-dyn = { workspace = true, optional = true }

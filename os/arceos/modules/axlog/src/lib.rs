@@ -199,20 +199,29 @@ impl Log for Logger {
                 let cpu_id = call_interface!(LogIf::current_cpu_id);
                 let tid = call_interface!(LogIf::current_task_id);
                 let now = call_interface!(LogIf::current_time);
+                // debugcon-only: on x86_64 with the debugcon-only feature, skip
+                // the UART (__print_impl) path entirely — logs go only to debugcon.
+                #[cfg(not(all(target_arch = "x86_64", feature = "debugcon-only")))]
+                let uart_enabled = true;
+                #[cfg(all(target_arch = "x86_64", feature = "debugcon-only"))]
+                let uart_enabled = false;
+
                 if let Some(cpu_id) = cpu_id {
                     if let Some(tid) = tid {
                         // show CPU ID and task ID
-                        __print_impl(with_color!(
-                            ColorCode::White,
-                            "[{:>3}.{:06} {cpu_id}:{tid} {path}:{line}] {args}\n",
-                            now.as_secs(),
-                            now.subsec_micros(),
-                            cpu_id = cpu_id,
-                            tid = tid,
-                            path = path,
-                            line = line,
-                            args = with_color!(args_color, "{}", record.args()),
-                        ));
+                        if uart_enabled {
+                            __print_impl(with_color!(
+                                ColorCode::White,
+                                "[{:>3}.{:06} {cpu_id}:{tid} {path}:{line}] {args}\n",
+                                now.as_secs(),
+                                now.subsec_micros(),
+                                cpu_id = cpu_id,
+                                tid = tid,
+                                path = path,
+                                line = line,
+                                args = with_color!(args_color, "{}", record.args()),
+                            ));
+                        }
                         #[cfg(target_arch = "x86_64")]
                         if level <= Level::Warn {
                             let _ = DebugCon.write_fmt(format_args!(
@@ -228,16 +237,18 @@ impl Log for Logger {
                         }
                     } else {
                         // show CPU ID only
-                        __print_impl(with_color!(
-                            ColorCode::White,
-                            "[{:>3}.{:06} {cpu_id} {path}:{line}] {args}\n",
-                            now.as_secs(),
-                            now.subsec_micros(),
-                            cpu_id = cpu_id,
-                            path = path,
-                            line = line,
-                            args = with_color!(args_color, "{}", record.args()),
-                        ));
+                        if uart_enabled {
+                            __print_impl(with_color!(
+                                ColorCode::White,
+                                "[{:>3}.{:06} {cpu_id} {path}:{line}] {args}\n",
+                                now.as_secs(),
+                                now.subsec_micros(),
+                                cpu_id = cpu_id,
+                                path = path,
+                                line = line,
+                                args = with_color!(args_color, "{}", record.args()),
+                            ));
+                        }
                         #[cfg(target_arch = "x86_64")]
                         if level <= Level::Warn {
                             let _ = DebugCon.write_fmt(format_args!(
@@ -253,15 +264,17 @@ impl Log for Logger {
                     }
                 } else {
                     // neither CPU ID nor task ID is shown
-                    __print_impl(with_color!(
-                        ColorCode::White,
-                        "[{:>3}.{:06} {path}:{line}] {args}\n",
-                        now.as_secs(),
-                        now.subsec_micros(),
-                        path = path,
-                        line = line,
-                        args = with_color!(args_color, "{}", record.args()),
-                    ));
+                    if uart_enabled {
+                        __print_impl(with_color!(
+                            ColorCode::White,
+                            "[{:>3}.{:06} {path}:{line}] {args}\n",
+                            now.as_secs(),
+                            now.subsec_micros(),
+                            path = path,
+                            line = line,
+                            args = with_color!(args_color, "{}", record.args()),
+                        ));
+                    }
                     #[cfg(target_arch = "x86_64")]
                     if level <= Level::Warn {
                         let _ = DebugCon.write_fmt(format_args!(
