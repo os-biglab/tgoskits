@@ -70,19 +70,19 @@ pub fn write_output_bytes<W: TtyWrite + ?Sized>(writer: &W, term: &Termios2, buf
         return;
     }
 
-    let mut start = 0;
-    for (i, &byte) in buf.iter().enumerate() {
+    // Collect output with \n→\r\n translation into a single buffer so we
+    // make exactly one writer.write() call instead of one per newline.
+    // This prevents partial-frame writes to the UART that cause visible
+    // line-by-line flicker on serial-connected terminal emulators.
+    let extra = buf.iter().filter(|&&b| b == b'\n').count();
+    let mut out = alloc::vec::Vec::with_capacity(buf.len() + extra);
+    for &byte in buf {
         if byte == b'\n' {
-            if start < i {
-                writer.write(&buf[start..i]);
-            }
-            writer.write(b"\r\n");
-            start = i + 1;
+            out.push(b'\r');
         }
+        out.push(byte);
     }
-    if start < buf.len() {
-        writer.write(&buf[start..]);
-    }
+    writer.write(&out);
 }
 
 struct InputReader<R, W> {
