@@ -89,6 +89,16 @@ impl<R: TtyRead, W: TtyWrite> DeviceOps for Tty<R, W> {
         if self.is_ptm {
             self.writer.write(buf);
         } else {
+            // Detect mouse enable/disable sequences (\x1b[?1000h etc.) written
+            // by TUI apps (crossterm EnableMouseCapture).  These go to debugcon
+            // so we can confirm the sequence actually leaves the kernel.
+            if buf.windows(3).any(|w| w == b"\x1b[?") {
+                warn!(
+                    "tty write: ESC[? sequence detected ({} bytes, ptm={})",
+                    buf.len(),
+                    self.is_ptm
+                );
+            }
             let term = self.terminal.load_termios();
             write_output_bytes(&self.writer, term.as_ref(), buf);
         }
@@ -112,6 +122,13 @@ impl<R: TtyRead, W: TtyWrite> DeviceOps for Tty<R, W> {
                 // Faultable user memory access inside an atomic context (preemption
                 // disabled) will call might_sleep() in handle_page_fault and panic.
                 let termios = Arc::new(Termios2::new((arg as *const Termios).vm_read()?));
+                warn!(
+                    "TCSETS: canonical={} echo={} isig={} ptm={}",
+                    termios.canonical(),
+                    termios.echo(),
+                    termios.has_lflag(linux_raw_sys::general::ISIG),
+                    self.is_ptm
+                );
                 *self.terminal.termios.lock() = termios;
                 if cmd == TCSETSF {
                     self.ldisc.lock().drain_input();
@@ -120,6 +137,13 @@ impl<R: TtyRead, W: TtyWrite> DeviceOps for Tty<R, W> {
             TCSETS2 | TCSETSF2 | TCSETSW2 => {
                 // TODO: drain output?
                 let termios = Arc::new((arg as *const Termios2).vm_read()?);
+                warn!(
+                    "TCSETS2: canonical={} echo={} isig={} ptm={}",
+                    termios.canonical(),
+                    termios.echo(),
+                    termios.has_lflag(linux_raw_sys::general::ISIG),
+                    self.is_ptm
+                );
                 *self.terminal.termios.lock() = termios;
                 if cmd == TCSETSF2 {
                     self.ldisc.lock().drain_input();

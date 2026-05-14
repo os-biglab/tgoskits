@@ -108,6 +108,18 @@ impl<R: TtyRead, W: TtyWrite> InputReader<R, W> {
         let mut progressed = false;
         if self.read_range.is_empty() {
             let read = self.reader.read(&mut self.read_buf);
+            if read > 0 {
+                // Log ESC-containing input so we can confirm mouse escape
+                // sequences (e.g. \x1b[<65;col;rowM) are reaching the ldisc.
+                // Goes to debugcon only; does not pollute the serial terminal.
+                if self.read_buf[..read].contains(&0x1b) {
+                    warn!(
+                        "ldisc rx: {} bytes, ESC present, canonical={}",
+                        read,
+                        self.terminal.load_termios().canonical()
+                    );
+                }
+            }
             self.read_range = 0..read;
             progressed |= read > 0;
         }
