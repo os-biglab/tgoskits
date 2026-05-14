@@ -216,9 +216,22 @@ impl AsyncTerminal {
             tokio::select! {
                 maybe_chunk = inbound_rx.recv() => {
                     match maybe_chunk {
-                        Some(chunk) => {
-                            write_output(output, &chunk)?;
-                            for byte in chunk {
+                        Some(first_chunk) => {
+                            // Drain all immediately-available chunks so that a
+                            // complete TUI frame (which QEMU sends as many small
+                            // UART-FIFO-sized bursts) is written to the host
+                            // terminal in one flush rather than piece-by-piece.
+                            // write_output does NOT flush at end; we flush once
+                            // after the drain so the terminal renders atomically.
+                            let mut all_bytes: Vec<u8> = Vec::with_capacity(first_chunk.len());
+                            all_bytes.extend_from_slice(&first_chunk);
+                            write_output(output, &first_chunk)?;
+                            while let Ok(chunk) = inbound_rx.try_recv() {
+                                all_bytes.extend_from_slice(&chunk);
+                                write_output(output, &chunk)?;
+                            }
+                            output.flush()?;
+                            for byte in all_bytes {
                                 (on_byte)(handle, byte);
                             }
                         }
@@ -494,14 +507,18 @@ pub fn encode_key_event(key: KeyEvent) -> io::Result<TerminalAction> {
     }
 }
 
+/// Write a chunk of guest output to the host terminal.
+///
+/// We write the whole chunk in one call and only flush on newline boundaries
+/// (for interactive shell use).  The caller is responsible for flushing after
+/// draining all immediately-available chunks so that TUI frames are sent to
+/// the host terminal in one shot rather than byte-by-byte.
 fn write_output(output: &mut impl Write, chunk: &[u8]) -> io::Result<()> {
-    for &b in chunk {
-        output.write_all(&[b])?;
-        if b == b'\n' {
-            output.flush()?;
-        }
+    output.write_all(chunk)?;
+    if chunk.contains(&b'\n') {
+        output.flush()?;
     }
-    output.flush()
+    Ok(())
 }
 
 fn handle_character_key(c: char, modifiers: KeyModifiers, bytes: &mut Vec<u8>) {

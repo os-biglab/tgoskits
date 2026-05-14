@@ -727,7 +727,12 @@ async fn read_child_stream<R>(
 where
     R: AsyncRead + Unpin,
 {
-    let mut buffer = [0u8; 1024];
+    // Use a 64 KiB read buffer so that a full ratatui TUI frame (typically
+    // 8–32 KiB of ANSI escape sequences) arrives in one chunk rather than in
+    // many 1 KiB pieces.  The sterm run_loop drains all available chunks with
+    // try_recv before flushing to the host terminal, so larger reads mean fewer
+    // intermediate renders and no visible line-by-line TUI flicker.
+    let mut buffer = vec![0u8; 65536];
     loop {
         let read = reader.read(&mut buffer).await?;
         if read == 0 {
