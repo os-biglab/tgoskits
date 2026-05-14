@@ -110,13 +110,19 @@ impl<R: TtyRead, W: TtyWrite> InputReader<R, W> {
             let read = self.reader.read(&mut self.read_buf);
             if read > 0 {
                 // Log ESC-containing input so we can confirm mouse escape
-                // sequences (e.g. \x1b[<65;col;rowM) are reaching the ldisc.
-                // Goes to debugcon only; does not pollute the serial terminal.
+                // sequences (e.g. \x1b[M scroll, \x1b[<65;...M SGR) reach ldisc.
                 if self.read_buf[..read].contains(&0x1b) {
+                    // Emit raw hex so we can identify the exact protocol/coords.
+                    let mut hex = alloc::string::String::new();
+                    for &b in &self.read_buf[..read.min(12)] {
+                        use core::fmt::Write;
+                        let _ = write!(hex, "{b:02x} ");
+                    }
                     warn!(
-                        "ldisc rx: {} bytes, ESC present, canonical={}",
+                        "ldisc rx: {} bytes canonical={} hex=[{}]",
                         read,
-                        self.terminal.load_termios().canonical()
+                        self.terminal.load_termios().canonical(),
+                        hex.trim_end()
                     );
                 }
             }

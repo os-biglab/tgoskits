@@ -164,6 +164,10 @@ impl<R: TtyRead, W: TtyWrite> DeviceOps for Tty<R, W> {
             }
             TIOCGWINSZ => {
                 let window_size = *self.terminal.window_size.lock();
+                warn!(
+                    "TIOCGWINSZ: rows={} cols={} ptm={}",
+                    window_size.ws_row, window_size.ws_col, self.is_ptm
+                );
                 (arg as *mut WindowSize).vm_write(window_size)?;
             }
             TIOCSWINSZ => {

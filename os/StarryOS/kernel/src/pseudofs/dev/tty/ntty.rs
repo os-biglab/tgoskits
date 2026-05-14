@@ -50,13 +50,19 @@ fn new_n_tty() -> Arc<NTtyDriver> {
     // to screen regions; a stale or wrong size breaks mouse scroll entirely.
     let terminal = {
         let t = super::terminal::Terminal::default();
-        if let Some((rows, cols)) = query_console_size() {
-            *t.window_size.lock() = WindowSize {
-                ws_row: rows,
-                ws_col: cols,
-                ws_xpixel: 0,
-                ws_ypixel: 0,
-            };
+        match query_console_size() {
+            Some((rows, cols)) => {
+                warn!("ntty: CPR query ok rows={rows} cols={cols}");
+                *t.window_size.lock() = WindowSize {
+                    ws_row: rows,
+                    ws_col: cols,
+                    ws_xpixel: 0,
+                    ws_ypixel: 0,
+                };
+            }
+            None => {
+                warn!("ntty: CPR query failed/timeout, using default 24x80");
+            }
         }
         Arc::new(t)
     };
