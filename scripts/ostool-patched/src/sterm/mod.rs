@@ -259,8 +259,14 @@ impl AsyncTerminal {
                             }
                         }
                         Some(Ok(Event::Mouse(mouse))) => {
-                            if let Some(bytes) = encode_mouse_event(mouse) {
-                                handle.send(bytes)?;
+                            // Drop pure move events: they carry no user intent and
+                            // flood the guest's TTY (one event per pixel moved),
+                            // triggering a redraw storm that freezes TUI apps like
+                            // jcode for seconds after each AI response.
+                            if !matches!(mouse.kind, MouseEventKind::Moved) {
+                                if let Some(bytes) = encode_mouse_event(mouse) {
+                                    handle.send(bytes)?;
+                                }
                             }
                         }
                         Some(Ok(_)) => {}
