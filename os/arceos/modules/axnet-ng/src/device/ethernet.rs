@@ -368,7 +368,10 @@ impl EthernetDevice {
             // for other resolved hosts queued behind an unresolved host were
             // never sent.  Scan the full queue instead: send what is
             // resolvable, re-enqueue what is not.
-            let mut kept: Vec<(IpAddress, Vec<u8>)> = Vec::new();
+            // Pre-allocate to avoid repeated heap reallocations during drain.
+            // Worst case: all ETHERNET_MAX_PENDING_PACKETS entries are kept.
+            let mut kept: Vec<(IpAddress, Vec<u8>)> =
+                Vec::with_capacity(ETHERNET_MAX_PENDING_PACKETS);
             for _ in 0..ETHERNET_MAX_PENDING_PACKETS {
                 let Ok((&next_hop, buf)) = self.pending_packets.peek() else {
                     break;

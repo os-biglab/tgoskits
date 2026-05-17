@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(bug-arp-hol-drain C)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+add_executable(bug-arp-hol-drain src/main.c)
+target_compile_options(bug-arp-hol-drain PRIVATE -Wall -Wextra -Werror)
+install(TARGETS bug-arp-hol-drain RUNTIME DESTINATION usr/bin)
