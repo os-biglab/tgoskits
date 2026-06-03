@@ -1,0 +1,3 @@
+[submodule "thubeamer"]
+	path = thubeamer
+	url = git@github.com:os-biglab/thubeamer.git
